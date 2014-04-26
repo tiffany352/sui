@@ -19,7 +19,7 @@ sui_stage *sui_stage_new(int width, int height)
 	return stage;
 }
 
-node *sui_layer_new(sui_stage *stage)
+sui_layer *sui_layer_new(sui_stage *stage)
 {
 	node *objs;
 	node *layer;
@@ -32,7 +32,7 @@ node *sui_layer_new(sui_stage *stage)
 	return layer;
 }
 
-void sui_stage_add(sui_stage *stage, sui_widget *widget, node *layer)
+void sui_stage_add(sui_stage *stage, sui_widget *widget, sui_layer *layer)
 {
 	node *obj;
 	node *objs = layer->val;

@@ -10,6 +10,4 @@ typedef struct sui_widget {
 	void (*update)(struct sui_widget*, sui_stage*);
 } sui_widget;
 
-sui_widget *sui_widget_new(void (*draw)(sui_widget*, cairo_t*));
-
 #endif

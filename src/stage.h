@@ -22,7 +22,7 @@ typedef struct sui_stage {
 
 sui_layer *sui_layer_new();
 sui_stage *sui_stage_new(int width, int height);
-void sui_stage_add(sui_stage *stage, struct sui_widget *widget, node *layer);
+void sui_stage_add(sui_stage *stage, struct sui_widget *widget, sui_layer *layer);
 void sui_stage_draw(sui_stage *stage);
 void sui_stage_update(sui_stage *stage);
 

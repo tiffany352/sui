@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include <GLFW/glfw3.h>
 #include <cairo/cairo.h>
 #include "../../src/sui.h"
 #include "../../src/widget.h"
 #include "../../src/widget/button.h"
 #include "../../src/widget/rect.h"
 #include "../../src/widget/image.h"
+#include <GLFW/glfw3.h>
 
 static sui_rect *rect;
 
