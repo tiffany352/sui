@@ -2,17 +2,14 @@
 
 static void update(sui_button *self, sui_stage *stage)
 {
-	double x, y;
-	GLFWwindow *window;
-
-	window = stage->window;
-	glfwGetCursorPos(window, &x, &y);
+	double x = stage->x;
+	double y = stage->y;
 
 	if (collides(x, y, self->x, self->y, self->width, self->height)) {
 		if (!self->over_ && self->enter)
 			self->enter(self);
 
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+		if (stage->down) {
 			if (!self->pressed_ && self->down)
 				self->down(self);
 

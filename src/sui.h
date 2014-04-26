@@ -3,10 +3,9 @@
 
 #include "internal.h"
 #include "stage.h"
-#include "keys.h"
 
-int sui_init();
-void sui_run(sui_stage *stage, sui_keys *keys);
-void sui_terminate();
+void sui_init(sui_stage *stage);
+void sui_run(sui_stage *stage, double x, double y, int down);
+void sui_terminate(sui_stage *stage);
 
 #endif

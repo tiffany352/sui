@@ -1,16 +1,17 @@
 #include "stage.h"
 #include "widget.h"
 
-sui_stage *sui_stage_new(GLFWwindow *window)
+sui_stage *sui_stage_new(int width, int height)
 {
 	sui_stage *stage;
-	int width;
-	int height;
 
 	stage = malloc(sizeof(sui_stage));
-	glfwGetWindowSize(window, &width, &height);
+	stage->width = width;
+	stage->height = height;
+	stage->x = 0;
+	stage->y = 0;
+	stage->down = 0;
 	stage->layers = NULL;
-	stage->window = window;
 	stage->surface =
 		cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
 	stage->dirty = 1;
