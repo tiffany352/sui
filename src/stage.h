@@ -19,7 +19,7 @@ typedef struct sui_stage {
 	int dirty;
 } sui_stage;
 
-sui_layer *sui_layer_new();
+sui_layer *sui_layer_new(sui_stage *stage);
 sui_stage *sui_stage_new(int width, int height);
 void sui_stage_add(sui_stage *stage, struct sui_widget *widget, sui_layer *layer);
 
