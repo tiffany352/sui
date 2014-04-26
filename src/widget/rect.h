@@ -6,18 +6,18 @@
 #include "../collision.h"
 
 typedef struct sui_rect {
-    sui_stage *stage;
-    void (*draw)(struct sui_rect*, cairo_t*);
-    void (*update)(struct sui_rect*, sui_stage*);
+	sui_stage *stage;
+	void (*draw)(struct sui_rect*, cairo_t*);
+	void (*update)(struct sui_rect*, sui_stage*);
 
-    int x;
-    int y;
-    int width;
-    int height;
-    float r;
-    float g;
-    float b;
-    float a;
+	int x;
+	int y;
+	int width;
+	int height;
+	float r;
+	float g;
+	float b;
+	float a;
 } sui_rect;
 
 sui_rect *sui_rect_new(int x, int y, int width, int height);

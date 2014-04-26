@@ -4,14 +4,14 @@
 #include "internal.h"
 
 typedef struct sui_keys {
-    node *callbacks;
-    int num_callbacks;
-    GLFWwindow *window;
+	node *callbacks;
+	int num_callbacks;
+	GLFWwindow *window;
 } sui_keys;
 
 typedef struct sui_key_cb {
-    int key;
-    void(*func)(int);
+	int key;
+	void(*func)(int);
 } sui_key_cb;
 
 sui_keys *sui_keys_new(GLFWwindow *window);

@@ -8,10 +8,10 @@ struct sui_widget;
 typedef node sui_layer;
 
 typedef struct sui_stage {
-    sui_layer *layers;
-    cairo_surface_t *surface;
-    GLFWwindow *window;
-    int dirty;
+	sui_layer *layers;
+	cairo_surface_t *surface;
+	GLFWwindow *window;
+	int dirty;
 } sui_stage;
 
 

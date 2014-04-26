@@ -6,15 +6,15 @@
 #include "../collision.h"
 
 typedef struct sui_image {
-    sui_stage *stage;
-    void (*draw)(struct sui_image*, cairo_t*);
-    void (*update)(struct sui_image*, sui_stage*);
+	sui_stage *stage;
+	void (*draw)(struct sui_image*, cairo_t*);
+	void (*update)(struct sui_image*, sui_stage*);
 
-    int x;
-    int y;
-    int width;
-    int height;
-    char *source;
+	int x;
+	int y;
+	int width;
+	int height;
+	char *source;
 } sui_image;
 
 sui_image *sui_image_new(int x, int y, int width, int height, char *source);

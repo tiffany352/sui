@@ -6,22 +6,22 @@
 #include "../collision.h"
 
 typedef struct sui_button {
-    sui_stage *stage;
-    void (*draw)(struct sui_button*, cairo_t*);
-    void (*update)(struct sui_button*, sui_stage*);
+	sui_stage *stage;
+	void (*draw)(struct sui_button*, cairo_t*);
+	void (*update)(struct sui_button*, sui_stage*);
 
-    int x;
-    int y;
-    int width;
-    int height;
+	int x;
+	int y;
+	int width;
+	int height;
 
-    int over_;
-    int pressed_;
+	int over_;
+	int pressed_;
 
-    void (*enter)(struct sui_button*);
-    void (*leave)(struct sui_button*);
-    void (*down)(struct sui_button*);
-    void (*up)(struct sui_button*);
+	void (*enter)(struct sui_button*);
+	void (*leave)(struct sui_button*);
+	void (*down)(struct sui_button*);
+	void (*up)(struct sui_button*);
 } sui_button;
 
 sui_button *sui_button_new(int x, int y, int width, int height);

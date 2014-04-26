@@ -9,8 +9,8 @@
 #include "uthash/utarray.h"
 
 typedef struct node {
-    void *val;
-    struct node *next, *prev;
+	void *val;
+	struct node *next, *prev;
 } node;
 
 #endif
