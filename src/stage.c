@@ -22,10 +22,10 @@ sui_stage *sui_stage_new(int width, int height)
 sui_layer *sui_layer_new(sui_stage *stage)
 {
 	node *objs;
-	node *layer;
+	sui_layer *layer;
 	objs = NULL;
 
-	layer = malloc(sizeof(node));
+	layer = malloc(sizeof(sui_layer));
 	layer->val = objs;
 	DL_APPEND(stage->layers, layer);
 
@@ -46,12 +46,12 @@ void sui_stage_add(sui_stage *stage, sui_widget *widget, sui_layer *layer)
 	stage->dirty = 1;
 }
 
-void sui_stage_draw(sui_stage *stage)
+void _sui_stage_draw(sui_stage *stage)
 {
 	cairo_surface_t *surface;
 	cairo_t *cr;
 	node *obj;
-	node *layer;
+	sui_layer *layer;
 	int i;
 
 	surface = stage->surface;
@@ -74,11 +74,11 @@ void sui_stage_draw(sui_stage *stage)
 	stage->dirty = 0;
 }
 
-void sui_stage_update(sui_stage *stage)
+void _sui_stage_update(sui_stage *stage)
 {
 	int i;
 	node *obj;
-	node *layer;
+	sui_layer *layer;
 
 	DL_FOREACH(stage->layers, layer) {
 		DL_FOREACH(layer->val, obj) {

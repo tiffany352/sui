@@ -11,6 +11,12 @@ sui has been designed to be windowing toolkit independent.  See the examples to 
 * [cairo](http://cairographics.org/)
 
 ## API
+### void _sui_stage_draw(sui_stage *stage)
+[INTERNAL] Draws the stage.
+
+### void _sui_stage_update(sui_stage *stage)
+[INTERNAL] Updates a stage's state.
+
 ### void sui_init(sui_stage *stage)
 Initializes OpenGL state.
 
@@ -23,14 +29,8 @@ Updates and renders the user interface.
 ### void sui_stage_add(sui_stage *stage, sui_widget *widget, sui_layer *layer)
 Adds a widgets to the stage.  The specified layer will determine the order of drawing.
 
-### void sui_stage_draw(sui_stage *stage)
-[INTERNAL] Draws the stage.
-
 ### sui_stage *sui_stage_new(int width, int height)
 Creates a new stage with a specified width and height.
-
-### void sui_stage_update(sui_stage *stage)
-[INTERNAL] Updates a stage's state.
 
 ### void sui_terminate(sui_stage *stage)
 Cleans up texture.

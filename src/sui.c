@@ -16,9 +16,9 @@ void sui_run(sui_stage *stage, double x, double y, int down)
 	stage->y = y;
 	stage->down = down;
 
-	sui_stage_update(stage);
+	_sui_stage_update(stage);
 	if (stage->dirty) {
-		sui_stage_draw(stage);
+		_sui_stage_draw(stage);
 		glBindTexture(GL_TEXTURE_2D, stage->texture_id[0]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
 				width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE,
