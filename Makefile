@@ -3,10 +3,22 @@ HEADER_FILES = src/*.h
 WIDGET_FILES = src/widget/*.c
 WIDGET_HEADERS = src/widget/*.h
 
-all:
-	clang examples/glfw/main.c $(SRC_FILES) $(WIDGET_FILES) \
+all: glfw sdl
+
+glfw:
+	clang examples/glfw/main.c -o glfw_example $(SRC_FILES) $(WIDGET_FILES) \
+		-I/usr/local/include \
 		$(shell pkg-config --libs --cflags glfw3) \
+		$(shell pkg-config --libs --cflags glew) \
 		$(shell pkg-config --libs --cflags cairo) -g
+
+sdl:
+	clang examples/sdl/main.c  -o sdl_example $(SRC_FILES) $(WIDGET_FILES) \
+		-I/usr/local/include \
+		$(shell pkg-config --libs --cflags sdl2) \
+		$(shell pkg-config --libs --cflags glew) \
+		$(shell pkg-config --libs --cflags cairo) -g
+
 
 .old README.md .new:
 	ctags --c-kinds=p -f- $(WIDGET_HEADERS) $(HEADER_FILES) | \
@@ -21,4 +33,4 @@ doc: .old .new README.md
 	mv doc2.md README.md
 	mv .new .old
 
-.PHONY: all doc
+.PHONY: all glfw sdl doc
