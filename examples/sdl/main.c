@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <cairo/cairo.h>
 #include "../../src/sui.h"
-#include "../../src/widget.h"
-#include "../../src/widget/button.h"
-#include "../../src/widget/rect.h"
-#include "../../src/widget/image.h"
+#include "../../src/elem.h"
+#include "../../src/elem/button.h"
+#include "../../src/elem/rect.h"
+#include "../../src/elem/image.h"
 #include <SDL.h>
 
 static sui_rect *rect;
@@ -36,9 +36,9 @@ int main(int argc, char *argv[])
 	//image = sui_image_new(275, 200, 20, 100, "asdf.png");
 	sui_button_leave(button, e);
 	sui_button_up(button, l);
-	sui_stage_add(stage, (sui_widget*)button, layer1);
-	sui_stage_add(stage, (sui_widget*)rect, layer1);
-	//sui_stage_add(stage, (sui_widget*)image, layer1);
+	sui_stage_add(stage, (sui_elem*)button, layer1);
+	sui_stage_add(stage, (sui_elem*)rect, layer1);
+	//sui_stage_add(stage, (sui_elem*)image, layer1);
 	sui_rect_set_color(rect, 1, 0, 0, 1);
 
 	sui_init(stage);

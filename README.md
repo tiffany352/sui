@@ -48,7 +48,7 @@ Sets an image's size.
 Initializes OpenGL state.
 
 ### sui_layer *sui_layer_new(sui_stage *stage);
-Creates a new layer.  Widgets attached to this layer will appear on top of any widgets attached to previously created layers.
+Creates a new layer.  Elements attached to this layer will appear on top of any elements attached to previously created layers.
 
 ### sui_rect *sui_rect_new(int x, int y, int width, int height);
 Creates a rectangle.
@@ -65,8 +65,8 @@ Sets a rectangle's size.
 ### void sui_run(sui_stage *stage, double x, double y, int down);
 Updates and renders the user interface.
 
-### void sui_stage_add(sui_stage *stage, sui_widget *widget, sui_layer *layer);
-Adds a widgets to the stage.  The specified layer will determine the order of drawing.
+### void sui_stage_add(sui_stage *stage, struct sui_elem *elem, sui_layer *layer);
+Adds a element to the stage.  The specified layer will determine the order of drawing.
 
 ### sui_stage *sui_stage_new(int width, int height);
 Creates a new stage with a specified width and height.

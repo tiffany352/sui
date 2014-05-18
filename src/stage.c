@@ -1,5 +1,5 @@
 #include "stage.h"
-#include "widget.h"
+#include "elem.h"
 
 sui_stage *sui_stage_new(int width, int height)
 {
@@ -32,14 +32,14 @@ sui_layer *sui_layer_new(sui_stage *stage)
 	return layer;
 }
 
-void sui_stage_add(sui_stage *stage, sui_widget *widget, sui_layer *layer)
+void sui_stage_add(sui_stage *stage, sui_elem *elem, sui_layer *layer)
 {
 	node *obj;
 	node *objs = layer->val;
 
-	widget->stage = stage;
+	elem->stage = stage;
 	obj = malloc(sizeof(node));
-	obj->val = widget;
+	obj->val = elem;
 	DL_APPEND(objs, obj);
 	layer->val = objs;
 
@@ -62,9 +62,9 @@ void _sui_stage_draw(sui_stage *stage)
 
 	DL_FOREACH(stage->layers, layer) {
 		DL_FOREACH(layer->val, obj) {
-			sui_widget *widget = obj->val;
-			if (widget->draw)
-				widget->draw(widget, cr);
+			sui_elem *elem = obj->val;
+			if (elem->draw)
+				elem->draw(elem, cr);
 		}
 	}
 
@@ -82,9 +82,9 @@ void _sui_stage_update(sui_stage *stage)
 
 	DL_FOREACH(stage->layers, layer) {
 		DL_FOREACH(layer->val, obj) {
-			sui_widget *widget = obj->val;
-			if (widget->update)
-				widget->update(widget, stage);
+			sui_elem *elem = obj->val;
+			if (elem->update)
+				elem->update(elem, stage);
 		}
 	}
 }
