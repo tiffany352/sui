@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <cairo/cairo.h>
 #include "../../src/sui.h"
-#include "../../src/elem.h"
 #include "../../src/elem/button.h"
 #include "../../src/elem/rect.h"
 #include "../../src/elem/image.h"
@@ -9,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 static sui_rect *rect;
+static sui_keys *keys;
 
 void e(sui_button *self){
 	sui_rect_set_color(rect, 1, 0, 0, 1);
@@ -16,6 +16,16 @@ void e(sui_button *self){
 
 void l(sui_button *self){
 	sui_rect_set_color(rect, 0, 1, 0, 1);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	sui_keys_register_down(keys, key);
+}
+
+void dd(int key)
+{
+	printf("%d", key);
 }
 
 int main(void)
@@ -36,6 +46,9 @@ int main(void)
 	button = sui_button_new(5, 20, 100, 10);
 	rect = sui_rect_new(5, 20, 100, 10);
 	text = sui_text_new(5, 20, "Hello World");
+	keys = sui_keys_new();
+	glfwSetKeyCallback(window, key_callback);
+	sui_keys_all_down(keys, dd);
 	//image = sui_image_new(275, 200, 20, 100, "asdf.png");
 	sui_button_leave(button, e);
 	sui_button_up(button, l);
