@@ -1,6 +1,15 @@
 # API
 The following is the sui API organized by general category.
 
+* [Core](#core)
+* [Layer](#layer)
+* [Stage](#stage)
+* [Button](#button)
+* [Image](#image)
+* [Rect](#rect)
+* [Text](#text)
+* [Internal](#internal)
+
 ## Core
 ### sui_init
 
@@ -47,6 +56,12 @@ Creates a new stage with a specified width and height.
 
 Creates a button.
 
+### sui_button_set_position
+
+	void sui_button_set_position(sui_button *button, int x, int y);
+
+Sets a button's position.
+
 ### sui_button_up
 
 	void sui_button_up(sui_button *button, void(*callback)(sui_button *self));
@@ -70,12 +85,6 @@ Set callback to be called when the cursor has entered the button.
 	void sui_button_leave(sui_button *button, void(*callback)(sui_button *self));
 
 Set callback to be called when the cursor has left the button.
-
-### sui_button_set_position
-
-	void sui_button_set_position(sui_button *button, int x, int y);
-
-Sets a button's position.
 
 ## Image
 ### sui_image_new
@@ -120,6 +129,31 @@ Sets a rectangle's size.
 	void sui_rect_set_color(sui_rect *rect, float r, float g, float b, float a);
 
 Sets a rectangle's color.
+
+## Text
+### sui_text_new
+
+	sui_text *sui_text_new(int x, int y, char *content);
+
+Creates text.
+
+### sui_text_set_position
+
+	void sui_text_set_position(sui_text *text, int x, int y);
+
+Sets a text's position.
+
+### sui_text_set_content
+
+	void sui_text_set_content(sui_text *text, char *content);
+
+Sets a text's content.
+
+### sui_text_set_color
+
+	void sui_text_set_color(sui_text *text, float r, float g, float b, float a);
+
+Sets a text's color.
 
 ## Internal
 ### _sui_stage_draw
