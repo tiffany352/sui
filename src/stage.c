@@ -52,7 +52,6 @@ void _sui_stage_draw(sui_stage *stage)
 	cairo_t *cr;
 	node *obj;
 	sui_layer *layer;
-	int i;
 
 	surface = stage->surface;
 	cr = cairo_create(surface);
@@ -79,7 +78,6 @@ void _sui_stage_draw(sui_stage *stage)
 
 void _sui_stage_update(sui_stage *stage)
 {
-	int i;
 	node *obj;
 	sui_layer *layer;
 
