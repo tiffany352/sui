@@ -5,6 +5,7 @@
 #include "../../src/elem/button.h"
 #include "../../src/elem/rect.h"
 #include "../../src/elem/image.h"
+#include "../../src/elem/text.h"
 #include <GLFW/glfw3.h>
 
 static sui_rect *rect;
@@ -25,6 +26,7 @@ int main(void)
 	GLFWwindow *window;
 	sui_stage *stage;
 	sui_button *button;
+	sui_text *text;
 	//sui_image *image;
 	node *layer1;
 
@@ -33,11 +35,13 @@ int main(void)
 	layer1 = sui_layer_new(stage);
 	button = sui_button_new(5, 20, 100, 10);
 	rect = sui_rect_new(5, 20, 100, 10);
+	text = sui_text_new(5, 20, "Hello World");
 	//image = sui_image_new(275, 200, 20, 100, "asdf.png");
 	sui_button_leave(button, e);
 	sui_button_up(button, l);
 	sui_stage_add(stage, (sui_elem*)button, layer1);
 	sui_stage_add(stage, (sui_elem*)rect, layer1);
+	sui_stage_add(stage, (sui_elem*)text, layer1);
 	//sui_stage_add(stage, (sui_elem*)image, layer1);
 	sui_rect_set_color(rect, 1, 0, 0, 1);
 
