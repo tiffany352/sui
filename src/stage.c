@@ -63,8 +63,11 @@ void _sui_stage_draw(sui_stage *stage)
 	DL_FOREACH(stage->layers, layer) {
 		DL_FOREACH(layer->val, obj) {
 			sui_elem *elem = obj->val;
-			if (elem->draw)
+			if (elem->draw) {
+				cairo_save(cr);
 				elem->draw(elem, cr);
+				cairo_restore(cr);
+			}
 		}
 	}
 
