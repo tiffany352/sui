@@ -19,4 +19,7 @@ sdl:
 		$(shell pkg-config --libs --cflags glew) \
 		$(shell pkg-config --libs --cflags cairo) -g
 
-.PHONY: all glfw sdl
+clean:
+	rm -r *_example*
+
+.PHONY: all glfw sdl clean
