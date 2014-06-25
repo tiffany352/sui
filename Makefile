@@ -19,18 +19,4 @@ sdl:
 		$(shell pkg-config --libs --cflags glew) \
 		$(shell pkg-config --libs --cflags cairo) -g
 
-
-.old README.md .new:
-	ctags --c-kinds=p -f- $(ELEM_HEADERS) $(HEADER_FILES) | \
-		grep -v "^!" | \
-		sort | \
-		cut -f 3-3 | \
-		awk '{gsub(/\/\^/,""); gsub(/\$$\/;"/,""); print "### " $$0;}' \
-		> $@
-
-doc: .old .new README.md
-	-diff3 -m .new .old README.md > doc2.md
-	mv doc2.md README.md
-	mv .new .old
-
-.PHONY: all glfw sdl doc
+.PHONY: all glfw sdl
