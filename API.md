@@ -4,11 +4,11 @@ The following is the sui API organized by general category.
 * [Core](#core)
 * [Layer](#layer)
 * [Stage](#stage)
+* [Keys](#keys)
 * [Button](#button)
 * [Image](#image)
 * [Rect](#rect)
 * [Text](#text)
-* [Internal](#internal)
 
 ## Core
 ### sui_init
@@ -37,17 +37,62 @@ Updates and renders the user interface.
 Creates a new layer.  Elements attached to this layer will appear on top of any elements attached to previously created layers.
 
 ## Stage
+### sui_stage_new
+
+	sui_stage *sui_stage_new(int width, int height);
+
+Creates a new stage with a specified width and height.
+
 ### sui_stage_add
 
 	void sui_stage_add(sui_stage *stage, struct sui_elem *elem, sui_layer *layer);
 
 Adds a element to the stage.  The specified layer will determine the order of drawing.
 
-### sui_stage_new
+## Keys
+### sui_keys_new
 
-	sui_stage *sui_stage_new(int width, int height);
+	sui_keys *sui_keys_new();
 
-Creates a new stage with a specified width and height.
+Creates a new keys object.
+
+### sui_keys_down
+
+	void sui_keys_down(sui_keys *keys, int key, void(*cb)(int));
+
+Will call callback when key is pressed down.
+
+
+### sui_keys_up
+
+	void sui_keys_up(sui_keys *keys, int key, void(*cb)(int));
+
+Will call callback when key is released.
+
+### sui_keys_all_down
+
+	void sui_keys_all_down(sui_keys *keys, void(*cb)(int));
+
+Will call callback when any key is pressed down.
+
+### sui_keys_all_up
+
+	void sui_keys_all_up(sui_keys *keys, void(*cb)(int));
+
+Will call callback when any key is released.
+
+
+### sui_keys_register_down
+
+	void sui_keys_register_down(sui_keys *keys, int key);
+
+Will register a key has been pressed down and call appropriate callbacks.
+
+### sui_keys_register_up
+
+	void sui_keys_register_up(sui_keys *keys, int key);
+
+Will register a key has been released and call appropriate callbacks.
 
 ## Button
 ### sui_button_new
@@ -154,16 +199,3 @@ Sets a text's content.
 	void sui_text_set_color(sui_text *text, float r, float g, float b, float a);
 
 Sets a text's color.
-
-## Internal
-### _sui_stage_draw
-
-	void _sui_stage_draw(sui_stage *stage);
-
-Draws the stage.
-
-### _sui_stage_update
-
-	void _sui_stage_update(sui_stage *stage);
-
-Updates a stage's state.
