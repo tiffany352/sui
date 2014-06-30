@@ -1,12 +1,17 @@
 CC = gcc
 CFLAGS = -Wall -Werror -I/usr/local/include
 BUILD = build
+GLFW_EG = glfw_example
+SDL_EG = sdl_example
+EXAMPLES = $(GLFW_EG) $(SDL_EG)
 LIBRARY = $(BUILD)/libsui.a
 SOURCES = $(wildcard src/*.c) $(wildcard src/*/*.c)
 HEADERS = $(wildcard src/*.h) $(wildcard src/*/*.h)
 OBJECTS = $(patsubst src/%.c,$(BUILD)/%.o,$(SOURCES))
 
-all: $(LIBRARY)
+all: lib glfw sdl
+
+lib: $(LIBRARY)
 
 $(LIBRARY): $(OBJECTS)
 	ar crl $(LIBRARY) $(OBJECTS)
@@ -20,7 +25,7 @@ $(BUILD):
 	mkdir -p $(BUILD)/elem
 
 clean:
-	rm -rf *_example*
+	rm -rf $(EXAMPLES)
 	rm -rf $(BUILD)
 
 glfw:
@@ -28,7 +33,7 @@ glfw:
 		$(shell pkg-config --libs --cflags glfw3) \
 		$(shell pkg-config --libs --cflags glew) \
 		$(shell pkg-config --libs --cflags cairo) \
-		-L$(BUILD) -lsui -g
+		-L$(BUILD) -lsui
 
 sdl:
 	$(CC) examples/sdl/main.c  -o sdl_example \
@@ -36,6 +41,6 @@ sdl:
 		$(shell pkg-config --libs --cflags sdl2) \
 		$(shell pkg-config --libs --cflags glew) \
 		$(shell pkg-config --libs --cflags cairo) \
-		-L$(BUILD) -lsui -g
+		-L$(BUILD) -lsui
 
-.PHONY: all clean glfw sdl
+.PHONY: all lib clean glfw sdl
