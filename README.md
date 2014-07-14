@@ -5,5 +5,4 @@ sui (The Sane User Interface Library) is a windowing-toolkit-independent library
 The API reference is available in the [documentation](https://github.com/camoy/sui/tree/master/API.md).
 
 ## Dependencies
-* [GLEW](http://glew.sourceforge.net/)
 * [cairo](http://cairographics.org/)
