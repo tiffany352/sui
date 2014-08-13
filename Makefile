@@ -5,8 +5,8 @@ BUILD = build
 GLFW_EG = $(BUILD)/glfw_example
 SDL_EG = $(BUILD)/sdl_example
 LIBRARY = $(BUILD)/libsui.so
-SOURCES = $(wildcard src/*.c) $(wildcard src/*/*.c)
-HEADERS = $(wildcard src/*.h) $(wildcard src/*/*.h)
+SOURCES = $(wildcard src/*.c)
+HEADERS = $(wildcard src/*.h)
 OBJECTS = $(patsubst src/%.c,$(BUILD)/%.o,$(SOURCES))
 
 # OpenGL
@@ -19,22 +19,24 @@ else
 	endif
 endif
 
-all: lib glfw sdl
+#all: lib glfw sdl
+all: lib glfw
 
 lib: $(LIBRARY)
 
 $(LIBRARY): $(OBJECTS)
 	$(CC) -shared -o $(LIBRARY) $(OBJECTS) \
 		$(GLFLAGS) \
+		$(shell pkg-config --libs glfw3) \
 		$(shell pkg-config --libs cairo)
 
 $(BUILD)/%.o: src/%.c $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@ \
+		$(shell pkg-config --cflags glfw3) \
 		$(shell pkg-config --cflags cairo)
 
 $(BUILD):
 	mkdir -p $(BUILD)
-	mkdir -p $(BUILD)/elem
 
 clean:
 	rm -rf $(BUILD)

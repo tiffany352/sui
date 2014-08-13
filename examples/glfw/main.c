@@ -1,80 +1,59 @@
 #include <stdio.h>
 #include <cairo/cairo.h>
 #include "../../src/sui.h"
-#include "../../src/elem/button.h"
-#include "../../src/elem/rect.h"
-#include "../../src/elem/image.h"
-#include "../../src/elem/text.h"
-#include <GLFW/glfw3.h>
+#include "../../src/glfw.h"
 
-static sui_rect *rect;
-static sui_keys *keys;
+static struct sui_state *state;
 
-void e(sui_button *self){
-	sui_rect_set_color(rect, 1, 0, 0, 1);
-}
-
-void l(sui_button *self){
-	sui_rect_set_color(rect, 0, 1, 0, 1);
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+// draws
+void paint_red(cairo_t *cr)
 {
-	sui_keys_register_down(keys, key);
+	cairo_set_source_rgba(cr, 1, 0, 0, 1);
+	cairo_rectangle(cr, 0, 0, 550, 400);
+	cairo_fill(cr);
 }
 
-void dd(int key)
+void paint_black(cairo_t *cr)
 {
-	printf("%d", key);
+	cairo_set_source_rgba(cr, 0, 0, 1, 1);
+	cairo_rectangle(cr, 0, 0, 550, 400);
+	cairo_fill(cr);
+}
+
+void call_paint_red()
+{
+	sui_screen_draw(state, paint_red);
+}
+
+void call_paint_black()
+{
+	sui_screen_draw(state, paint_black);
 }
 
 int main(void)
 {
-	if (!glfwInit())
+	// init
+	state = sui_glfw_init(550, 400, "sui");
+	if (!state)
 		return -1;
 
-	GLFWwindow *window;
-	sui_stage *stage;
-	sui_button *button;
-	sui_text *text;
-	//sui_image *image;
-	node *layer1;
+	// events
+	sui_mouse_down(state, 0, 0, 550, 400, call_paint_red);
+	//sui_mouse_up(state, 0, 0, 550, 400, call_paint_black);
 
-	window = glfwCreateWindow(550, 400, "Hello World", NULL, NULL);
-	stage = sui_stage_new(550, 400);
-	layer1 = sui_layer_new(stage);
-	button = sui_button_new(5, 20, 100, 10);
-	rect = sui_rect_new(5, 20, 100, 10);
-	text = sui_text_new(5, 20, "Hello World");
-	keys = sui_keys_new();
-	glfwSetKeyCallback(window, key_callback);
-	sui_keys_all_down(keys, dd);
-	//image = sui_image_new(275, 200, 20, 100, "asdf.png");
-	sui_button_leave(button, e);
-	sui_button_up(button, l);
-	sui_stage_add(stage, (sui_elem*)button, layer1);
-	sui_stage_add(stage, (sui_elem*)rect, layer1);
-	sui_stage_add(stage, (sui_elem*)text, layer1);
-	//sui_stage_add(stage, (sui_elem*)image, layer1);
-	sui_rect_set_color(rect, 1, 0, 0, 1);
+	//sui_key_down(state, call_paint_red);
+	//sui_key_up(state, call_paint_black);
 
-	if (!window) {
-		glfwTerminate();
-		return -1;
-	}
+//	sui_screen_draw(state, sui_screen_clear);
+//
 
-	sui_init(stage);
-	glfwMakeContextCurrent(window);
-	while (!glfwWindowShouldClose(window)) {
-		double x;
-		double y;
-		glfwGetCursorPos(window, &x, &y);
-		sui_run(stage, x, y, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS);
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-	sui_terminate(stage);
-	glfwTerminate();
+	call_paint_black();
+
+	// loop
+	sui_glfw_loop();
+
+	// terminate
+	sui_glfw_terminate();
 
 	return 0;
 }

@@ -1,13 +1,22 @@
 #ifndef SUI_H
 #define SUI_H
 
-#include "internal.h"
-#include "stage.h"
+#include <cairo/cairo.h>
 #include "keys.h"
-#include "elem.h"
+#include "mouse.h"
+#include "screen.h"
 
-void sui_init(sui_stage *stage);
-void sui_run(sui_stage *stage, double x, double y, int down);
-void sui_terminate(sui_stage *stage);
+struct sui_state {
+	int width;
+	int height;
+	cairo_surface_t *surface;
+	struct sui_keys *keys;
+	struct sui_mouse *mouse;
+	unsigned int texture_id[1];
+};
+
+struct sui_state *sui_init(int width, int height);
+struct sui_state *sui_run(struct sui_state *state);
+struct sui_state *sui_terminate(struct sui_state *state);
 
 #endif
