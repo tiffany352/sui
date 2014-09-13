@@ -1,8 +1,7 @@
 # sui
-sui (The Sane User Interface Library) is a windowing-toolkit-independent library for building user interfaces by rendering cairo textures with OpenGL.
-
-## Documentation
-The API reference is available in the [documentation](https://github.com/camoy/sui/tree/master/API.md).
+A library designed to provide embeddable user interfaces in games and other applications. Rendering is done with OpenGL 3.1.
 
 ## Dependencies
-* [cairo](http://cairographics.org/)
+* [tiffgl](https://github.com/tiffany352/tiffgl/)
+* SDL is used by the example
+* Compiled with [Tup](http://gittup.org/tup/)
