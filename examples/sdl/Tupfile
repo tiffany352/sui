@@ -1,0 +1,4 @@
+include_rules
+
+: foreach *.c |> !cc |>
+: *.o | $(TOP)/libsui.a $(TOP)/tiffgl/libtgl.a |> !ld |> ../../sdl_example
