@@ -44,13 +44,13 @@ endif
 
 TOP = $(TUP_CWD)
 
-CCFLAGS = -Wall -Wextra -pedantic -DTGL_USE_$(LOADER) -I$(TOP)/src -I$(TOP)/tiffgl/src @(CCFLAGS)
+CCFLAGS = -Wall -Wextra -pedantic -Werror -DTGL_USE_$(LOADER) -I$(TOP)/src -I$(TOP)/tiffgl/src @(CCFLAGS)
 
 CXXFLAGS = -std=c++11 @(CXXFLAGS)
 
-CFLAGS = `$(PKG_CONFIG) --cflags epoxy sdl2` -std=c99 @(CFLAGS)
+CFLAGS = `$(PKG_CONFIG) --cflags epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -std=c99 @(CFLAGS)
 
-LDFLAGS = `$(PKG_CONFIG) --libs epoxy sdl2` -L$(TOP) -lsui -L$(TOP)/tiffgl -ltgl @(LDFLAGS)
+LDFLAGS = `$(PKG_CONFIG) --libs epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -L$(TOP) -lsui -L$(TOP)/tiffgl -ltgl @(LDFLAGS)
 
 ifeq ($(CXX),clang++)
   CXXFLAGS += -fcolor-diagnostics
