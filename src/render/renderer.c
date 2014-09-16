@@ -138,11 +138,16 @@ static void simple_blit(unsigned char *dst, const unsigned char *src,
                         unsigned dw, unsigned dh, unsigned sw, unsigned sh,
                         int dx, int dy)
 {
+    if (sw == 0 || sh == 0) {
+        return;
+    }
+    if (-dx >= (int)sw || -dy >= (int)sh || dx >= (int)dw || dy >= (int)dh) {
+        printf("warning: completely clipped src\n");
+        return;
+    }
     unsigned stride = 1;
     unsigned spitch = sw;
     unsigned dpitch = dw;
-    unsigned soffset = 0;
-    unsigned doffset = dpitch*dy + stride*dx;
     unsigned dxmax = dw - dx;
     unsigned dymax = dh - dy;
     unsigned sx = dx < 0? -dx : 0;
@@ -151,9 +156,11 @@ static void simple_blit(unsigned char *dst, const unsigned char *src,
     unsigned h = dymax < sh? dymax : sh;
     unsigned dend = dw*dh*stride;
     unsigned send = sw*sh*stride;
+    unsigned soffset = 0;
+    unsigned doffset = dpitch*dy + stride*dx;
     for (unsigned y = sy; y < h; y++) {
-        unsigned dpos = doffset + dpitch*y;
-        unsigned spos = soffset + spitch*y;
+        unsigned dpos = doffset + dpitch*y + stride*sx;
+        unsigned spos = soffset + spitch*y + stride*sx;
         unsigned line = w - sx;
         assert(dst+dpos+line <= dst+dend && src+spos+line <= src+send);
         memcpy(dst+dpos, src+spos, line*stride);
@@ -204,17 +211,19 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
-    unsigned str_width = fmt.size*64, str_height = fmt.size*64;
+    unsigned str_width = fmt.size*64, str_height = fmt.size*64+64;
     for (unsigned i = 0; i < glyph_count; i++) {
         str_width += glyph_pos[i].x_advance;
         str_height += glyph_pos[i].y_advance;
     }
-    str_width = 256;//(str_width + 63) / 64;
+    str_width = (str_width + 63) / 64;
+    // force the width to be divisible by four
+    // for some reason the intel driver freaks the fuck out when you don't do this
+    str_width = (str_width+3) & ~3;
     str_height = (str_height + 63) / 64;
-    printf("%ux%u\n", str_width, str_height);
 
     unsigned char *img = calloc(str_width * str_height, 1);
-    unsigned pen_x = 0, pen_y = 0;
+    int pen_x = 0, pen_y = 0;
     for (unsigned i = 0; i < glyph_count; i++) {
         // not a unicode codepoint.
         unsigned codepoint = glyph_info[i].codepoint;
@@ -231,6 +240,10 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         }
         FT_Bitmap *bm = &glyph->bitmap;
         unsigned top = fmt.size;
+        // prevents wrapping to the left side
+        if (i == 0) {
+            pen_x = glyph->bitmap_left * 64;
+        }
         simple_blit(img, bm->buffer,
                     str_width, str_height, bm->width, bm->rows,
                     pen_x/64 - glyph->bitmap_left, pen_y/64 + top - glyph->bitmap_top);
@@ -239,14 +252,10 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     }
     hb_buffer_destroy(buf);
 
-    //sui_debug_print_image(img, str_width, str_height, str_width);
-    printf("%ux%u\n", str_width, str_height);
-
     GLuint tex;
     glGenTextures(1, &tex);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
-    printf("%ux%u\n", str_width, str_height);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, str_width, str_height, 0, GL_RED, GL_UNSIGNED_BYTE, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

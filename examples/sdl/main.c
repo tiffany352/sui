@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
             sui_rect(sui_size(0,0, 60,10), sui_col(255,100,125, 255)),
             sui_rect(sui_size(780,550, 20, 50), sui_col(255,255,255, 255)),
             sui_rect(sui_size(100,300, 200,40), sui_col(25,190,50, 255)),
-            sui_text(sui_size(100,300, 200,40), sui_col(255,255,255, 255), english, "hello worldhello worldhello world"),
+            sui_text(sui_size(100,300, 200,40), sui_col(255,255,255, 255), english, "hello world"),
             sui_text(sui_size(100,400, 200,40), sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")
         };
 
