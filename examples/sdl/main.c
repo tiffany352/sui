@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <SDL.h>
+#include <sys/time.h>
 
 #include "tgl/tgl.h"
 #include "widgets/widgets.h"
@@ -45,6 +46,13 @@ static GLvoid error_cb(GLenum source, GLenum type, GLuint id, GLenum severity,
     printf("(OpenGL%s) %s%s #%u: %s\n", ssource, sseverity, stype, id, msg);
 }
 
+void timersub(struct timeval *a, struct timeval *b, struct timeval *r)
+{
+    bool carry = b->tv_usec > a->tv_usec;
+    r->tv_usec = carry? a->tv_usec + 1000000 - b->tv_usec : a->tv_usec - b->tv_usec;
+    r->tv_sec = a->tv_sec - b->tv_sec - carry;
+}
+
 int main(int argc, char *argv[])
 {
     (void)argc, (void)argv;
@@ -61,6 +69,7 @@ int main(int argc, char *argv[])
     sui_renderer r[1];
     char *error;
     sui_font georgia[1], meirio[1];
+    struct timeval start, tv;
     sui_textfmt english = {
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
@@ -98,6 +107,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    gettimeofday(&start, NULL);
+
     while (1) {
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
@@ -108,12 +119,18 @@ int main(int argc, char *argv[])
         glClearColor(0.4, 0.5, 1.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        gettimeofday(&tv, NULL);
+        timersub(&tv, &start, &tv);
+        char curtime[30];
+        sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
+
         sui_cmd buf[] = {
-            sui_rect(sui_size(0,0, 60,10), sui_col(255,100,125, 255)),
+            sui_rect(sui_size(0,0,     60, 20), sui_col(128, 50, 48, 255)),
             sui_rect(sui_size(780,550, 20, 50), sui_col(255,255,255, 255)),
-            sui_rect(sui_size(100,300, 200,40), sui_col(25,190,50, 255)),
+            sui_rect(sui_size(100,300, 200,40), sui_col( 25,190, 50, 255)),
+            sui_text(sui_size(0,0,     100,40), sui_col(255,255,255, 255), english, curtime),
             sui_text(sui_size(100,300, 200,40), sui_col(255,255,255, 255), english, "hello world"),
-            sui_text(sui_size(100,400, 200,40), sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")
+            sui_text(sui_size(100,320, 200,40), sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")
         };
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd));

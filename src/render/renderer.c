@@ -246,7 +246,8 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         }
         simple_blit(img, bm->buffer,
                     str_width, str_height, bm->width, bm->rows,
-                    pen_x/64 - glyph->bitmap_left, pen_y/64 + top - glyph->bitmap_top);
+                    pen_x/64 - glyph_pos[i].x_offset - glyph->bitmap_left,
+                    pen_y/64 - glyph_pos[i].y_offset - glyph->bitmap_top + top);
         pen_x += glyph_pos[i].x_advance;
         pen_y += glyph_pos[i].y_advance;
     }
