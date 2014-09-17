@@ -211,10 +211,34 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
-    unsigned str_width = fmt.size*64, str_height = fmt.size*64+64;
+    unsigned str_width = 0, str_height = 0;
+    int xadv = 0, yadv = 0;
     for (unsigned i = 0; i < glyph_count; i++) {
-        str_width += glyph_pos[i].x_advance;
-        str_height += glyph_pos[i].y_advance;
+        // not a unicode codepoint.
+        unsigned codepoint = glyph_info[i].codepoint;
+        if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
+            printf("FT_Load_Glyph: %i\n", fterr);
+            abort();
+            return;
+        }
+        FT_GlyphSlotRec *glyph = face->glyph;
+        if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
+            printf("FT_Render_Glyph: %i\n", fterr);
+            abort();
+            return;
+        }
+        FT_Bitmap *bm = &glyph->bitmap;
+        unsigned top = fmt.size;
+        int px = xadv + bm->width*64 - glyph->bitmap_left*64;
+        int py = yadv + bm->rows*64 - glyph->bitmap_top*64 + top*64;
+        if (px > (int)str_width) {
+            str_width = px;
+        }
+        if (py > (int)str_height) {
+            str_height = py;
+        }
+        xadv += glyph_pos[i].x_advance;
+        yadv += glyph_pos[i].y_advance;
     }
     str_width = (str_width + 63) / 64;
     // force the width to be divisible by four
