@@ -3,7 +3,7 @@
 #include <sys/time.h>
 
 #include "tgl/tgl.h"
-#include "widgets/widgets.h"
+#include "render/widgets.h"
 #include "render/renderer.h"
 
 static GLvoid error_cb(GLenum source, GLenum type, GLuint id, GLenum severity,

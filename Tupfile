@@ -1,5 +1,5 @@
 include_rules
 
 : shaders/* |> shaders/convert.sh > shaders.c |> shaders.c
-: foreach src/*.c src/widgets/*.c src/render/*.c shaders.c |> !cc |>
+: foreach src/*.c src/render/*.c shaders.c |> !cc |>
 : *.o |> !ar |> libsui.a
