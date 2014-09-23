@@ -6,7 +6,7 @@
 
 #include <harfbuzz/hb-icu.h>
 
-#include "render/widgets.h"
+#include "sui/widgets.h"
 
 enum sui_arrattribs {
     SUI_RECT_POS

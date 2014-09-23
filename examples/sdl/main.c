@@ -3,8 +3,8 @@
 #include <sys/time.h>
 
 #include "tgl/tgl.h"
-#include "render/widgets.h"
-#include "render/renderer.h"
+#include "sui/widgets.h"
+#include "sui/renderer.h"
 
 static GLvoid error_cb(GLenum source, GLenum type, GLuint id, GLenum severity,
                        GLsizei length, const GLchar* message, GLvoid* user)
