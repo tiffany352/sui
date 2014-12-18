@@ -34,19 +34,21 @@ typedef struct sui_textfmt {
 #define sui_size(x,y,w,h) (sui_aabb){x,y,x+w,y+h}
 #define sui_col(r,g,b,a) (uint8_t[]){r,g,b,a}
 
+enum sui_cmd_type {
+    SUI_RECT,
+    SUI_TEXT,
+};
+
 typedef struct sui_cmd {
-    enum {
-        SUI_RECT,
-        SUI_TEXT,
-    } type;
+    enum sui_cmd_type type;
     sui_aabb aabb;
     unsigned char col[4];
     union {
+        int dummy;
         struct {
             sui_textfmt fmt;
             const char *text;
         } text;
-        int dummy;
     } data;
 } sui_cmd;
 
@@ -61,7 +63,7 @@ static inline sui_cmd sui_rect(sui_aabb aabb, unsigned char col[4])
         SUI_RECT,
         aabb,
         {col[0], col[1], col[2], col[3]},
-        {.dummy = 0}
+        {0}
     };
     return cmd;
 }
@@ -72,10 +74,10 @@ static inline sui_cmd sui_text(sui_aabb aabb, unsigned char col[4], sui_textfmt 
         SUI_TEXT,
         aabb,
         {col[0], col[1], col[2], col[3]},
-        {.text = {
-                fmt,
-                text }}
+        {0}
     };
+    cmd.data.text.fmt = fmt;
+    cmd.data.text.text = text;
     return cmd;
 }
 
