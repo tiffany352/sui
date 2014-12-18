@@ -302,7 +302,6 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
 {
     glEnable(GL_BLEND);
-    glEnable(GL_TEXTURE_2D);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     tgl_vao_bind(&r->vao);
