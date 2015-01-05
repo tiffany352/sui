@@ -8,6 +8,7 @@
 #include <harfbuzz/hb-ft.h>
 
 #include "tgl/tgl.h"
+#include "util.h"
 
 struct sui_cmd;
 
@@ -31,10 +32,10 @@ typedef struct sui_renderer {
     } text;
 } sui_renderer;
 
-bool __attribute__((warn_unused_result)) sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path);
-bool __attribute__((warn_unused_result)) sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len);
+bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
+bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;
 
-bool __attribute__((warn_unused_result)) sui_renderer_init(sui_renderer *r, char **error);
+bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len);
 
 #endif

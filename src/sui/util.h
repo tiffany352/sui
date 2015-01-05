@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define WARN_UNUSED __attribute__((warn_unused_result))
+#define PRINTF __attribute__((format(printf, 1, 2)))
+
 inline size_t sui_real_reserve(void **ptr, size_t eltsize, size_t size, size_t cap, size_t more)
 {
     if (cap - size < more) {
@@ -21,5 +24,7 @@ inline size_t sui_real_reserve(void **ptr, size_t eltsize, size_t size, size_t c
 }
 
 #define sui_reserve(p, s, c, m) sui_real_reserve((void**)&p, sizeof(p[0]), s, c, m)
+
+char *sui_aprintf(const char *fmt, ...) PRINTF;
 
 #endif

@@ -49,6 +49,7 @@ CCFLAGS += -Wall -Wextra -pedantic -Werror -DTGL_USE_$(LOADER) -I$(TOP)/src @(CC
 CXXFLAGS += -std=c++11 @(CXXFLAGS)
 
 CFLAGS += `$(PKG_CONFIG) --cflags epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -std=c99 @(CFLAGS)
+CFLAGS += `$(PKG_CONFIG) --cflags epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -std=gnu99 @(CFLAGS)
 
 LDFLAGS += `$(PKG_CONFIG) --libs epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -L$(TOP) -lsui -ltgl @(LDFLAGS)
 

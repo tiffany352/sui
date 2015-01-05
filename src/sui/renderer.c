@@ -20,27 +20,21 @@ static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face
     return true;
 }
 
-bool __attribute__((warn_unused_result)) sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path)
+bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path)
 {
     FT_Error fterr;
     if ((fterr = FT_New_Face(r->text.library, path, 0, &font->face))) {
-        char *buf = malloc(128);
-        int res = snprintf(buf, 128, "FT_New_Face: Error code %i", fterr);
-        buf = realloc(buf, res);
-        *error = buf;
+        *error = sui_aprintf("FT_New_Face: Error code %i", fterr);
         return false;
     }
     return font_fromfont(font, r, error, font->face);
 }
 
-bool __attribute__((warn_unused_result)) sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len)
+bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len)
 {
     FT_Error fterr;
     if ((fterr = FT_New_Memory_Face(r->text.library, buf, len, 0, &font->face))) {
-        char *buf = malloc(128);
-        int res = snprintf(buf, 128, "FT_New_Memory_Face: Error code %i", fterr);
-        buf = realloc(buf, res);
-        *error = buf;
+        *error = sui_aprintf("FT_New_Memory_Face: Error code %i", fterr);
         return false;
     }
     return font_fromfont(font, r, error, font->face);
@@ -59,10 +53,12 @@ bool sui_renderer_init(sui_renderer *r, char **error)
 
     {
         struct sui_renderer_rect *rect = &r->rect;
-        if (!tgl_make_shader(&rect->shader.vertex, GL_VERTEX_SHADER, sui_shader_quad_vert, strlen(sui_shader_quad_vert), error)) {
+        if (!tgl_make_shader(&rect->shader.vertex, GL_VERTEX_SHADER, sui_shader_quad_vert,
+                             strlen(sui_shader_quad_vert), error)) {
             return false;
         }
-        if (!tgl_make_shader(&rect->shader.fragment, GL_FRAGMENT_SHADER, sui_shader_rect_frag, strlen(sui_shader_rect_frag), error)) {
+        if (!tgl_make_shader(&rect->shader.fragment, GL_FRAGMENT_SHADER, sui_shader_rect_frag,
+                             strlen(sui_shader_rect_frag), error)) {
             return false;
         }
         rect->shader.program = glCreateProgram();
@@ -77,10 +73,12 @@ bool sui_renderer_init(sui_renderer *r, char **error)
 
     {
         struct sui_renderer_text *text = &r->text;
-        if (!tgl_make_shader(&text->shader.vertex, GL_VERTEX_SHADER, sui_shader_quad_vert, strlen(sui_shader_quad_vert), error)) {
+        if (!tgl_make_shader(&text->shader.vertex, GL_VERTEX_SHADER, sui_shader_quad_vert,
+                             strlen(sui_shader_quad_vert), error)) {
             return false;
         }
-        if (!tgl_make_shader(&text->shader.fragment, GL_FRAGMENT_SHADER, sui_shader_text_frag, strlen(sui_shader_text_frag), error)) {
+        if (!tgl_make_shader(&text->shader.fragment, GL_FRAGMENT_SHADER, sui_shader_text_frag,
+                             strlen(sui_shader_text_frag), error)) {
             return false;
         }
         text->shader.program = glCreateProgram();

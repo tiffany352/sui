@@ -46,7 +46,7 @@ static GLvoid error_cb(GLenum source, GLenum type, GLuint id, GLenum severity,
     printf("(OpenGL%s) %s%s #%u: %s\n", ssource, sseverity, stype, id, msg);
 }
 
-void timersub(struct timeval *a, struct timeval *b, struct timeval *r)
+void sui_timersub(struct timeval *a, struct timeval *b, struct timeval *r)
 {
     bool carry = b->tv_usec > a->tv_usec;
     r->tv_usec = carry? a->tv_usec + 1000000 - b->tv_usec : a->tv_usec - b->tv_usec;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT);
 
         gettimeofday(&tv, NULL);
-        timersub(&tv, &start, &tv);
+        sui_timersub(&tv, &start, &tv);
         char curtime[30];
         sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
 
