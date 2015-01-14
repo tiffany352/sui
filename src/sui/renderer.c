@@ -103,7 +103,7 @@ bool sui_renderer_init(sui_renderer *r, char **error)
     return true;
 }
 
-static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_rect(sui_dcmd cmd, unsigned w, unsigned h, sui_renderer *r)
 {
     struct sui_renderer_rect *rect = &r->rect;
     glUseProgram(rect->shader.program);
@@ -112,7 +112,7 @@ static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     float uw = (cmd.aabb.hx - cmd.aabb.lx) / (float)w;
     float uh = (cmd.aabb.hy - cmd.aabb.ly) / -(float)h;
     glUniform4f(rect->upos, ux, uy, uw, uh);
-    unsigned char *col = cmd.col;
+    unsigned char *col = cmd.wcmd.col;
     glUniform4f(rect->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     tgl_quad_draw_once(&r->vbo);
 }
@@ -165,7 +165,7 @@ static void simple_blit(unsigned char *dst, const unsigned char *src,
     }
 }
 
-static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_text(sui_dcmd cmd, unsigned w, unsigned h, sui_renderer *r)
 {
     struct sui_renderer_text *text = &r->text;
     static const int text_dir_table[] = {
@@ -175,7 +175,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         HB_DIRECTION_BTT
     };
 
-    sui_textfmt fmt = cmd.data.text.fmt;
+    sui_textfmt fmt = cmd.wcmd.data.text.fmt;
     FT_Face face = fmt.font->face;
     FT_Error fterr;
 
@@ -201,7 +201,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         return;
     }
     hb_buffer_set_language(buf, lang);
-    const char *msg = cmd.data.text.text;
+    const char *msg = cmd.wcmd.data.text.text;
     hb_buffer_add_utf8(buf, msg, strlen(msg), 0, strlen(msg));
     hb_shape(fmt.font->hb_font, buf, NULL, 0);
 
@@ -291,20 +291,20 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     float uw = str_width / (float)w;
     float uh = str_height / -(float)h;
     glUniform4f(text->upos, ux, uy, uw, uh);
-    unsigned char *col = cmd.col;
+    unsigned char *col = cmd.wcmd.col;
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     glUniform1i(text->usampler, 0);
     tgl_quad_draw_once(&r->vbo);
 }
 
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
+void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_dcmd *cmds, size_t len)
 {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     tgl_vao_bind(&r->vao);
     for (unsigned i = 0; i < len; i++) {
-        switch (cmds[i].type) {
+        switch (cmds[i].wcmd.type) {
         case SUI_RECT:
             draw_rect(cmds[i], w, h, r);
             break;
