@@ -24,34 +24,21 @@ else
 AR = ar rcs
 endif
 
-ifdef PKG_CONFIG
-PKG_CONFIG = @(PKG_CONFIG)
-else
-PKG_CONFIG = pkg-config
-endif
-
 ifdef PROG_SUFFIX
 PROG_SUFFIX = @(PROG_SUFFIX)
 else
 PROG_SUFFIX =
 endif
 
-ifdef LOADER
-LOADER = @(LOADER)
-else
-LOADER = EPOXY
-endif
-
 TOP = $(TUP_CWD)
 
-CCFLAGS += -Wall -Wextra -pedantic -Werror -DTGL_USE_$(LOADER) -I$(TOP)/src @(CCFLAGS)
+CCFLAGS += -Wall -Wextra -pedantic -Werror -I$(TOP)/src @(CCFLAGS)
 
 CXXFLAGS += -std=c++11 @(CXXFLAGS)
 
-CFLAGS += `$(PKG_CONFIG) --cflags epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -std=c99 @(CFLAGS)
-CFLAGS += `$(PKG_CONFIG) --cflags epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -std=gnu99 @(CFLAGS)
+CFLAGS += -std=gnu99 @(CFLAGS)
 
-LDFLAGS += `$(PKG_CONFIG) --libs epoxy sdl2 freetype2 harfbuzz harfbuzz-icu` -L$(TOP) -lsui -ltgl @(LDFLAGS)
+LDFLAGS += -L$(TOP) -lsui -ltgl @(LDFLAGS)
 
 ifeq ($(CXX),clang++)
   CXXFLAGS += -fcolor-diagnostics
