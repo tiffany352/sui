@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harfbuzz/hb-icu.h>
+#include <hb-icu.h>
 
 #include "sui/widgets.h"
 
