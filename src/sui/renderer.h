@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include <harfbuzz/hb.h>
-#include <harfbuzz/hb-ft.h>
+#include <hb.h>
+#include <hb-ft.h>
 
 #include "tgl/tgl.h"
 #include "util.h"
