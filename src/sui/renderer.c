@@ -152,8 +152,10 @@ static void simple_blit(unsigned char *dst, const unsigned char *src,
     unsigned sy = dy < 0? -dy : 0;
     unsigned w = dxmax < sw? dxmax : sw;
     unsigned h = dymax < sh? dymax : sh;
+#ifndef NDEBUG
     unsigned dend = dw*dh*stride;
     unsigned send = sw*sh*stride;
+#endif
     unsigned soffset = 0;
     unsigned doffset = dpitch*dy + stride*dx;
     for (unsigned y = sy; y < h; y++) {
