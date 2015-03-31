@@ -297,6 +297,8 @@ static void draw_text(sui_dcmd cmd, unsigned w, unsigned h, sui_renderer *r)
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     glUniform1i(text->usampler, 0);
     tgl_quad_draw_once(&r->vbo);
+
+    glDeleteTextures(1, &tex);
 }
 
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_dcmd *cmds, size_t len)
