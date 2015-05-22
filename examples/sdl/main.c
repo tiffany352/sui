@@ -74,7 +74,6 @@ int main(int argc, char *argv[])
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
         14,
-        georgia,
         "en",
         "Latin"
     };
@@ -82,7 +81,6 @@ int main(int argc, char *argv[])
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
         14,
-        meirio,
         "jp",
         "Hiragana"
     };
@@ -95,7 +93,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfile(georgia, r, &error, "georgia.ttf")) {
+    if (!sui_font_fromfile(georgia, r, &error, "/usr/share/fonts/adobe-source-sans-pro/SourceSansPro-Regular.otf")) {
         printf("%s\n", error);
         free(error);
         return 1;
@@ -104,6 +102,16 @@ int main(int argc, char *argv[])
     if (!sui_font_fromfile(meirio, r, &error, "meirio.ttf")) {
         printf("%s\n", error);
         free(error);
+        return 1;
+    }
+
+    sui_layout english_text[1], japanese_text[1];
+    const char english_str[] = "The quick brown Fox jumps over the lazy Dog.";
+    const char japanese_str[] = "こんにちは、世界中のみなさん";
+    if (!sui_font_layout(georgia, english_text, &english, english_str, strlen(english_str))) {
+        return 1;
+    }
+    if (!sui_font_layout(meirio, japanese_text, &japanese, japanese_str, strlen(japanese_str))) {
         return 1;
     }
 
@@ -124,13 +132,17 @@ int main(int argc, char *argv[])
         char curtime[30];
         sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
 
+        sui_layout curtime_text[1];
+        sui_font_layout(georgia, curtime_text, &english, curtime, strlen(curtime));
+
         sui_cmd buf[] = {
-            sui_rect(sui_size(0,0,     60, 20), sui_col(128, 50, 48, 255)),
-            sui_rect(sui_size(780,550, 20, 50), sui_col(255,255,255, 255)),
-            sui_rect(sui_size(100,300, 200,40), sui_col( 25,190, 50, 255)),
-            sui_text(sui_size(0,0,     100,40), sui_col(255,255,255, 255), english, curtime),
-            sui_text(sui_size(100,300, 200,40), sui_col(255,255,255, 255), english, "hello world"),
-            sui_text(sui_size(100,320, 200,40), sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")
+            sui_rect(sui_size(0,0,     1.0,1.0), sui_col(128,110, 48, 255)),
+            sui_rect(sui_size(0,0,     .06,.02), sui_col(128, 50, 48, 255)),
+            sui_rect(sui_size(.78,.55, .02,.05), sui_col(255,255,255, 255)),
+            sui_rect(sui_size(.10,.30, .20,.08), sui_col( 25,190, 50, 255)),
+            sui_text(sui_size(0,0,     .10,.04), sui_col(255,255,255, 255), curtime_text, .15),
+            sui_text(sui_size(-.9,.30, .20,.04), sui_col(255,255,255, 255), english_text, .07),
+            sui_text(sui_size(.10,.50, .20,.04), sui_col(255,255,255, 255), japanese_text, .05)
         };
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd));

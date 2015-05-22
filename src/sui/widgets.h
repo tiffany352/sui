@@ -1,37 +1,10 @@
 #ifndef SUI_WIDGETS_H
 #define SUI_WIDGETS_H
 
-typedef struct sui_aabb {
-    unsigned lx,ly, hx,hy;
-} sui_aabb;
+typedef struct sui_mat3 {
+    float data[9];
+} sui_mat3;
 
-typedef enum sui_align {
-    SUI_ALIGN_LEFT   = 0,
-    SUI_ALIGN_RIGHT  = 1,
-    SUI_ALIGN_TOP    = 2,
-    SUI_ALIGN_BOTTOM = 3,
-    SUI_ALIGN_TOPLEFT = SUI_ALIGN_TOP|SUI_ALIGN_LEFT,
-    SUI_ALIGN_TOPRIGHT = SUI_ALIGN_TOP|SUI_ALIGN_RIGHT,
-    SUI_ALIGN_BOTTOMLEFT = SUI_ALIGN_BOTTOM|SUI_ALIGN_LEFT,
-    SUI_ALIGN_BOTTOMRIGHT = SUI_ALIGN_BOTTOM|SUI_ALIGN_RIGHT,
-} sui_align;
-
-typedef enum sui_direction {
-    SUI_DIR_LTR,
-    SUI_DIR_RTL,
-    SUI_DIR_TTB,
-    SUI_DIR_BTT,
-} sui_direction;
-
-typedef struct sui_textfmt {
-    sui_align align;
-    sui_direction dir;
-    unsigned size;
-    struct sui_font *font;
-    const char *lang, *script;
-} sui_textfmt;
-
-#define sui_size(x,y,w,h) (sui_aabb){x,y,x+w,y+h}
 #define sui_col(r,g,b,a) (uint8_t[]){r,g,b,a}
 
 enum sui_cmd_type {
@@ -41,43 +14,58 @@ enum sui_cmd_type {
 
 typedef struct sui_cmd {
     enum sui_cmd_type type;
-    sui_aabb aabb;
+    sui_mat3 mat;
     unsigned char col[4];
     union {
         int dummy;
         struct {
-            sui_textfmt fmt;
-            const char *text;
+            struct sui_layout *layout;
+            float em;
         } text;
     } data;
 } sui_cmd;
 
-typedef struct sui_button {
-    sui_aabb aabb;
-    unsigned char col[4];
-} sui_button;
+static inline sui_mat3 sui_size(float x, float y, float w, float h)
+{
+    sui_mat3 mat = {{
+            w, 0, x,
+            0, h, y,
+            0, 0, 1
+        }};
+    return mat;
+}
 
-static inline sui_cmd sui_rect(sui_aabb aabb, unsigned char col[4])
+static inline sui_mat3 sui_translate(sui_mat3 m, float x, float y)
+{
+    sui_mat3 mat = {{
+            m.data[0], m.data[1], m.data[2] + x,
+            m.data[3], m.data[4], m.data[5] + y,
+            m.data[6], m.data[7], m.data[8]
+        }};
+    return mat;
+}
+
+static inline sui_cmd sui_rect(sui_mat3 mat, unsigned char col[4])
 {
     sui_cmd cmd = {
         SUI_RECT,
-        aabb,
+        mat,
         {col[0], col[1], col[2], col[3]},
         {0}
     };
     return cmd;
 }
 
-static inline sui_cmd sui_text(sui_aabb aabb, unsigned char col[4], sui_textfmt fmt, const char *text)
+static inline sui_cmd sui_text(sui_mat3 mat, unsigned char col[4], struct sui_layout *layout, float em)
 {
     sui_cmd cmd = {
         SUI_TEXT,
-        aabb,
+        mat,
         {col[0], col[1], col[2], col[3]},
         {0}
     };
-    cmd.data.text.fmt = fmt;
-    cmd.data.text.text = text;
+    cmd.data.text.layout = layout;
+    cmd.data.text.em = em;
     return cmd;
 }
 

@@ -15,13 +15,26 @@ enum sui_arrattribs {
 static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face face)
 {
     (void)r, (void)error;
+    font->face = face;
+    FT_Error fterr;
+    if ((fterr = FT_Set_Pixel_Sizes(font->face, 0, 64))) {
+        *error = sui_aprintf("FT_Set_Char_Size: %i\n", fterr);
+        return false;
+    }
     font->hb_font = hb_ft_font_create(face, NULL);
     font->hb_face = hb_ft_face_create(face, NULL);
+    font->width = (font->face->bbox.xMax - font->face->bbox.xMin + 63) * 64 / font->face->units_per_EM;
+    // force the width to be divisible by four
+    // for some reason the intel driver freaks the fuck out when you don't do this
+    font->width = (font->width+3)&~3;
+    font->height = (font->face->bbox.yMax - font->face->bbox.yMin + 63) * 64 / font->face->units_per_EM;
+    glGenTextures(1, &font->tex);
     return true;
 }
 
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path)
 {
+    memset(font, 0, sizeof(sui_font));
     FT_Error fterr;
     if ((fterr = FT_New_Face(r->text.library, path, 0, &font->face))) {
         *error = sui_aprintf("FT_New_Face: Error code %i", fterr);
@@ -32,12 +45,158 @@ bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char
 
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len)
 {
+    memset(font, 0, sizeof(sui_font));
     FT_Error fterr;
     if ((fterr = FT_New_Memory_Face(r->text.library, buf, len, 0, &font->face))) {
         *error = sui_aprintf("FT_New_Memory_Face: Error code %i", fterr);
         return false;
     }
     return font_fromfont(font, r, error, font->face);
+}
+
+unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint)
+{
+    for (unsigned i = 0; i < font->length; i++) {
+        if (font->codepoints[i] == codepoint) {
+            return i;
+        }
+    }
+    glBindTexture(GL_TEXTURE_2D_ARRAY, font->tex);
+    if (font->length >= font->capacity) {
+        size_t new_cap = font->capacity? font->capacity * 3 : 64;
+        unsigned char *data = calloc(font->width * font->height * new_cap, 1);
+        if (font->data) {
+            memcpy(data, font->data, font->width * font->height * font->length * 1);
+            free(font->data);
+        }
+        font->data = data;
+        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8,
+                     font->width, font->height, new_cap,
+                     0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0,
+                        0, 0, 0,
+                        font->width, font->height, font->length,
+                        GL_RED, GL_UNSIGNED_BYTE, font->data);
+        glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_LOD_BIAS, -1.0);
+        FT_Glyph_Metrics *metrics = calloc(new_cap, sizeof(FT_Glyph_Metrics));
+        if (font->metrics) {
+            memcpy(metrics, font->metrics, font->length * sizeof(FT_Glyph_Metrics));
+            free(font->metrics);
+        }
+        font->metrics = metrics;
+        uint32_t *codepoints = calloc(new_cap, sizeof(uint32_t));
+        if (font->codepoints) {
+            memcpy(codepoints, font->codepoints, font->length * sizeof(uint32_t));
+            free(font->codepoints);
+        }
+        font->codepoints = codepoints;
+        font->capacity = new_cap;
+    }
+    FT_Error fterr;
+    if ((fterr = FT_Load_Glyph(font->face, codepoint, FT_LOAD_DEFAULT))) {
+        printf("FT_Load_Glyph: %i\n", fterr);
+        abort();
+    }
+    FT_GlyphSlotRec *glyph = font->face->glyph;
+    if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
+        printf("FT_Render_Glyph: %i\n", fterr);
+        abort();
+    }
+    unsigned l = font->length++;
+    font->codepoints[l] = codepoint;
+    font->metrics[l] = glyph->metrics;
+    FT_Bitmap *bitmap = &glyph->bitmap;
+    unsigned char *ldata = font->data + font->width*font->height*l;
+    assert(font->height >= bitmap->rows);
+    assert(font->width >= bitmap->width);
+    unsigned diff = 0; //font->height - bitmap->rows;
+    for (unsigned i = 0; i < bitmap->rows; i++) {
+        memcpy(ldata + font->width*(i+diff), bitmap->buffer + bitmap->pitch*i, bitmap->width);
+    }
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0,
+                    0, 0, 0,
+                    font->width, font->height, font->length,
+                    GL_RED, GL_UNSIGNED_BYTE, font->data);
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    return l;
+}
+
+typedef struct sui_iaabb {
+    int lx, ly;
+    int hx, hy;
+} sui_iaabb;
+
+#define min(a,b) (a>b?b:a)
+#define max(a,b) (a>b?a:b)
+
+static sui_iaabb sui_iaabb_expand(sui_iaabb a, sui_iaabb b)
+{
+    sui_iaabb r;
+    r.lx = min(a.lx, b.lx);
+    r.ly = min(a.ly, b.ly);
+    r.hx = max(a.hx, b.hx);
+    r.hy = max(a.hy, b.hy);
+    return r;
+}
+
+bool sui_font_layout(sui_font *font, sui_layout *layout, sui_textfmt *fmt, const char *text, size_t len)
+{
+    static const int text_dir_table[] = {
+        HB_DIRECTION_LTR,
+        HB_DIRECTION_RTL,
+        HB_DIRECTION_TTB,
+        HB_DIRECTION_BTT
+    };
+
+    layout->font = font;
+    layout->align = fmt->align;
+
+    layout->buf = hb_buffer_create();
+    hb_buffer_set_unicode_funcs(layout->buf, hb_icu_get_unicode_funcs());
+    hb_buffer_set_direction(layout->buf, text_dir_table[fmt->dir]);
+    hb_script_t script = hb_script_from_string(fmt->script, -1);
+    if (script == HB_SCRIPT_INVALID || script == HB_SCRIPT_UNKNOWN) {
+        printf("Invalid script: %s\n", fmt->script);
+        abort();
+        return false;
+    }
+    hb_buffer_set_script(layout->buf, script);
+    hb_language_t lang = hb_language_from_string(fmt->lang, -1);
+    if (lang == HB_LANGUAGE_INVALID) {
+        printf("Invalid language: %s\n", fmt->lang);
+        return false;
+    }
+    hb_buffer_set_language(layout->buf, lang);
+    hb_buffer_add_utf8(layout->buf, text, len, 0, len);
+    hb_shape(font->hb_font, layout->buf, NULL, 0);
+
+    layout->glyph_info = hb_buffer_get_glyph_infos(layout->buf, &layout->glyph_count);
+    layout->glyph_pos = hb_buffer_get_glyph_positions(layout->buf, &layout->glyph_count);
+
+    sui_iaabb bb = (sui_iaabb){0,0,0,0};
+    int xadv = 0, yadv = 0;
+    for (unsigned i = 0; i < layout->glyph_count; i++) {
+        // Not a unicode codepoint
+        unsigned codepoint = layout->glyph_info[i].codepoint;
+        unsigned id = sui_font_getGlyph(font, codepoint);
+        FT_Glyph_Metrics *metrics = &font->metrics[id];
+        int px = xadv + metrics->horiBearingX;
+        int py = yadv + metrics->horiBearingY;
+        bb = sui_iaabb_expand(bb, (sui_iaabb){px, py - metrics->height, px + metrics->width, py});
+        xadv += layout->glyph_pos[i].x_advance;
+        yadv += layout->glyph_pos[i].y_advance;
+    }
+    layout->origin_x = -bb.lx;
+    layout->origin_y = -bb.ly;
+    layout->width = bb.hx - bb.lx;
+    layout->height = bb.hy - bb.ly;
+
+    return true;
 }
 
 extern const char sui_shader_quad_vert[];
@@ -90,6 +249,8 @@ bool sui_renderer_init(sui_renderer *r, char **error)
         text->upos = glGetUniformLocation(text->shader.program, "upos");
         text->ucolor = glGetUniformLocation(text->shader.program, "ucolor");
         text->usampler = glGetUniformLocation(text->shader.program, "usampler");
+        text->uchar = glGetUniformLocation(text->shader.program, "uchar");
+        text->usize = glGetUniformLocation(text->shader.program, "usize");
         FT_Error fterr;
         if ((fterr = FT_Init_FreeType(&text->library))) {
             char *buf = malloc(128);
@@ -103,15 +264,11 @@ bool sui_renderer_init(sui_renderer *r, char **error)
     return true;
 }
 
-static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_rect(sui_cmd cmd, sui_renderer *r)
 {
     struct sui_renderer_rect *rect = &r->rect;
     glUseProgram(rect->shader.program);
-    float ux = cmd.aabb.lx / (float)w;
-    float uy = 1.0 - cmd.aabb.ly / (float)h;
-    float uw = (cmd.aabb.hx - cmd.aabb.lx) / (float)w;
-    float uh = (cmd.aabb.hy - cmd.aabb.ly) / -(float)h;
-    glUniform4f(rect->upos, ux, uy, uw, uh);
+    glUniformMatrix3fv(rect->upos, 1, GL_TRUE, cmd.mat.data);
     unsigned char *col = cmd.col;
     glUniform4f(rect->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     tgl_quad_draw_once(&r->vbo);
@@ -132,173 +289,70 @@ void sui_debug_print_image(const unsigned char *src, unsigned w, unsigned h, uns
     }
 }
 
-static void simple_blit(unsigned char *dst, const unsigned char *src,
-                        unsigned dw, unsigned dh, unsigned sw, unsigned sh,
-                        int dx, int dy)
+static void sui_repeat_print(unsigned num, char c)
 {
-    if (sw == 0 || sh == 0) {
-        return;
+    for (unsigned i = 0; i < num; i++) {
+        printf("%c", c);
     }
-    if (-dx >= (int)sw || -dy >= (int)sh || dx >= (int)dw || dy >= (int)dh) {
-        printf("warning: completely clipped src\n");
-        return;
-    }
-    unsigned stride = 1;
-    unsigned spitch = sw;
-    unsigned dpitch = dw;
-    unsigned dxmax = dw - dx;
-    unsigned dymax = dh - dy;
-    unsigned sx = dx < 0? -dx : 0;
-    unsigned sy = dy < 0? -dy : 0;
-    unsigned w = dxmax < sw? dxmax : sw;
-    unsigned h = dymax < sh? dymax : sh;
-    unsigned dend = dw*dh*stride;
-    unsigned send = sw*sh*stride;
-    unsigned soffset = 0;
-    unsigned doffset = dpitch*dy + stride*dx;
-    for (unsigned y = sy; y < h; y++) {
-        unsigned dpos = doffset + dpitch*y + stride*sx;
-        unsigned spos = soffset + spitch*y + stride*sx;
-        unsigned line = w - sx;
-        assert(dst+dpos+line <= dst+dend && src+spos+line <= src+send);
-        memcpy(dst+dpos, src+spos, line*stride);
+    printf("\n");
+}
+
+void sui_debug_print_atlas(sui_font *font)
+{
+    for (unsigned i = 0; i < font->length; i++) {
+        printf("Entry for codepoint %u:\n", font->codepoints[i]);
+        sui_repeat_print(font->width, '_');
+        unsigned w,h;
+        w = (font->metrics[i].width + 63) / 64;
+        h = (font->metrics[i].height + 63) / 64;
+        assert(h <= font->height);
+        unsigned diff = font->height - h;
+        sui_debug_print_image(font->data + font->width*font->height*i + font->width*diff, w, h, font->width);
+        sui_repeat_print(font->width, '^');
     }
 }
 
-static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_text(sui_cmd cmd, sui_renderer *r)
 {
     struct sui_renderer_text *text = &r->text;
-    static const int text_dir_table[] = {
-        HB_DIRECTION_LTR,
-        HB_DIRECTION_RTL,
-        HB_DIRECTION_TTB,
-        HB_DIRECTION_BTT
-    };
+    sui_layout *l = cmd.data.text.layout;
+    float em = cmd.data.text.em;
 
-    sui_textfmt fmt = cmd.data.text.fmt;
-    FT_Face face = fmt.font->face;
-    FT_Error fterr;
-
-    if ((fterr = FT_Set_Pixel_Sizes(face, 0, fmt.size))) {
-        printf("FT_Set_Char_Size: %i\n", fterr);
-        abort();
-        return;
-    }
-    hb_buffer_t *buf = hb_buffer_create();
-    hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
-    hb_buffer_set_direction(buf, text_dir_table[fmt.dir]);
-    hb_script_t script = hb_script_from_string(fmt.script, -1);
-    if (script == HB_SCRIPT_INVALID || script == HB_SCRIPT_UNKNOWN) {
-        printf("Invalid script: %s\n", fmt.script);
-        abort();
-        return;
-    }
-    hb_buffer_set_script(buf, script);
-    hb_language_t lang = hb_language_from_string(fmt.lang, -1);
-    if (lang == HB_LANGUAGE_INVALID) {
-        printf("Invalid language: %s\n", fmt.lang);
-        abort();
-        return;
-    }
-    hb_buffer_set_language(buf, lang);
-    const char *msg = cmd.data.text.text;
-    hb_buffer_add_utf8(buf, msg, strlen(msg), 0, strlen(msg));
-    hb_shape(fmt.font->hb_font, buf, NULL, 0);
-
-    unsigned glyph_count;
-    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
-    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
-
-    unsigned str_width = 0, str_height = 0;
-    int xadv = 0, yadv = 0;
-    for (unsigned i = 0; i < glyph_count; i++) {
-        // not a unicode codepoint.
-        unsigned codepoint = glyph_info[i].codepoint;
-        if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
-            printf("FT_Load_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_GlyphSlotRec *glyph = face->glyph;
-        if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
-            printf("FT_Render_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_Bitmap *bm = &glyph->bitmap;
-        unsigned top = fmt.size;
-        int px = xadv + bm->width*64 - glyph->bitmap_left*64;
-        int py = yadv + bm->rows*64 - glyph->bitmap_top*64 + top*64;
-        if (px > (int)str_width) {
-            str_width = px;
-        }
-        if (py > (int)str_height) {
-            str_height = py;
-        }
-        xadv += glyph_pos[i].x_advance;
-        yadv += glyph_pos[i].y_advance;
-    }
-    str_width = (str_width + 63) / 64;
-    // force the width to be divisible by four
-    // for some reason the intel driver freaks the fuck out when you don't do this
-    str_width = (str_width+3) & ~3;
-    str_height = (str_height + 63) / 64;
-
-    unsigned char *img = calloc(str_width * str_height, 1);
-    int pen_x = 0, pen_y = 0;
-    for (unsigned i = 0; i < glyph_count; i++) {
-        // not a unicode codepoint.
-        unsigned codepoint = glyph_info[i].codepoint;
-        if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
-            printf("FT_Load_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_GlyphSlotRec *glyph = face->glyph;
-        if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
-            printf("FT_Render_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_Bitmap *bm = &glyph->bitmap;
-        unsigned top = fmt.size;
-        // prevents wrapping to the left side
-        if (i == 0) {
-            pen_x = glyph->bitmap_left * 64;
-        }
-        simple_blit(img, bm->buffer,
-                    str_width, str_height, bm->width, bm->rows,
-                    pen_x/64 - glyph_pos[i].x_offset - glyph->bitmap_left,
-                    pen_y/64 - glyph_pos[i].y_offset - glyph->bitmap_top + top);
-        pen_x += glyph_pos[i].x_advance;
-        pen_y += glyph_pos[i].y_advance;
-    }
-    hb_buffer_destroy(buf);
-
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, str_width, str_height, 0, GL_RED, GL_UNSIGNED_BYTE, img);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    free(img);
-
+    assert(l->align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
     glUseProgram(text->shader.program);
-    assert(fmt.align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
-    float ux = cmd.aabb.lx / (float)w;
-    float uy = 1.0 - cmd.aabb.ly / (float)h;
-    float uw = str_width / (float)w;
-    float uh = str_height / -(float)h;
-    glUniform4f(text->upos, ux, uy, uw, uh);
     unsigned char *col = cmd.col;
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     glUniform1i(text->usampler, 0);
-    tgl_quad_draw_once(&r->vbo);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, l->font->tex);
+
+    int pen_x = 0, pen_y = 0;
+    for (unsigned i = 0; i < l->glyph_count; i++) {
+        unsigned id = sui_font_getGlyph(l->font, l->glyph_info[i].codepoint);
+        FT_Glyph_Metrics *metrics = &l->font->metrics[id];
+        const float s = 64.0*64.0;
+        int gx = pen_x + metrics->horiBearingX;
+        int gy = pen_y + metrics->horiBearingY;
+        float x = (em * gx / s) + cmd.mat.data[2];
+        float y = (em * gy / s) + cmd.mat.data[5];
+        float w = em * metrics->width / s;
+        float h = em * metrics->height / s;
+        sui_mat3 mat = sui_size(x, y, w, -h);
+        glUniformMatrix3fv(text->upos, 1, GL_TRUE, mat.data);
+        glUniform1i(text->uchar, id);
+        //assert(metrics->width && metrics->height);
+        glUniform2f(text->usize,
+                    metrics->width / (float)l->font->width / 64.0,
+                    metrics->height / (float)l->font->height / 64.0);
+        tgl_quad_draw_once(&r->vbo);
+        pen_x += l->glyph_pos[i].x_advance;
+        pen_y += l->glyph_pos[i].y_advance;
+    }
 }
 
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
 {
+    (void)w, (void)h;
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -306,10 +360,10 @@ void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, s
     for (unsigned i = 0; i < len; i++) {
         switch (cmds[i].type) {
         case SUI_RECT:
-            draw_rect(cmds[i], w, h, r);
+            draw_rect(cmds[i], r);
             break;
         case SUI_TEXT:
-            draw_text(cmds[i], w, h, r);
+            draw_text(cmds[i], r);
             break;
         }
     }
