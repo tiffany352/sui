@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfile(georgia, r, &error, "/usr/share/fonts/adobe-source-sans-pro/SourceSansPro-Regular.otf")) {
+    if (!sui_font_fromfile(georgia, r, &error, "georgia.ttf")) {
         printf("%s\n", error);
         free(error);
         return 1;
@@ -136,13 +136,12 @@ int main(int argc, char *argv[])
         sui_font_layout(georgia, curtime_text, &english, curtime, strlen(curtime));
 
         sui_cmd buf[] = {
-            sui_rect(sui_size(0,0,     1.0,1.0), sui_col(128,110, 48, 255)),
-            sui_rect(sui_size(0,0,     .06,.02), sui_col(128, 50, 48, 255)),
-            sui_rect(sui_size(.78,.55, .02,.05), sui_col(255,255,255, 255)),
-            sui_rect(sui_size(.10,.30, .20,.08), sui_col( 25,190, 50, 255)),
+            sui_rect(sui_size(-1,-1,   2.0,2.0), sui_col(128,110, 48, 255)),
+            sui_rect(sui_size(0,-.03,  .80,.15), sui_col(128, 50, 48, 255)),
+            sui_rect(sui_size(-.9,.27, 1.5,.08), sui_col( 25,190, 50, 255)),
             sui_text(sui_size(0,0,     .10,.04), sui_col(255,255,255, 255), curtime_text, .15),
             sui_text(sui_size(-.9,.30, .20,.04), sui_col(255,255,255, 255), english_text, .07),
-            sui_text(sui_size(.10,.50, .20,.04), sui_col(255,255,255, 255), japanese_text, .05)
+            sui_text(sui_size(-.5,.50, .20,.04), sui_col(255,255,255, 255), japanese_text, .10)
         };
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd));

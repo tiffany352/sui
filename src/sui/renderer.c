@@ -12,20 +12,21 @@ enum sui_arrattribs {
     SUI_RECT_POS
 };
 
+static const unsigned glyph_size = 128;
+
 static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face face)
 {
     (void)r, (void)error;
     font->face = face;
     FT_Error fterr;
-    if ((fterr = FT_Set_Pixel_Sizes(font->face, 0, 64))) {
+    if ((fterr = FT_Set_Pixel_Sizes(font->face, 0, glyph_size))) {
         *error = sui_aprintf("FT_Set_Char_Size: %i\n", fterr);
         return false;
     }
     font->hb_font = hb_ft_font_create(face, NULL);
     font->hb_face = hb_ft_face_create(face, NULL);
     font->width = (font->face->bbox.xMax - font->face->bbox.xMin + 63) * 64 / font->face->units_per_EM;
-    // force the width to be divisible by four
-    // for some reason the intel driver freaks the fuck out when you don't do this
+    // force the width to be divisible by four, because of alignment
     font->width = (font->width+3)&~3;
     font->height = (font->face->bbox.yMax - font->face->bbox.yMin + 63) * 64 / font->face->units_per_EM;
     glGenTextures(1, &font->tex);
@@ -79,7 +80,7 @@ unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint)
                         GL_RED, GL_UNSIGNED_BYTE, font->data);
         glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_LOD_BIAS, -1.0);
@@ -98,12 +99,20 @@ unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint)
         font->capacity = new_cap;
     }
     FT_Error fterr;
-    if ((fterr = FT_Load_Glyph(font->face, codepoint, FT_LOAD_DEFAULT))) {
+    if ((fterr = FT_Set_Pixel_Sizes(font->face, 0, glyph_size))) {
+        printf("FT_Set_Char_Size: %i\n", fterr);
+        abort();
+    }
+    if ((fterr = FT_Load_Glyph(font->face, codepoint, FT_LOAD_DEFAULT | FT_LOAD_NO_SCALE))) {
         printf("FT_Load_Glyph: %i\n", fterr);
         abort();
     }
     FT_GlyphSlotRec *glyph = font->face->glyph;
-    if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
+    if (font->face->glyph->format != FT_GLYPH_FORMAT_OUTLINE) {
+        printf("Bitmap fonts are not supported.");
+        abort();
+    }
+    if ((fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
         printf("FT_Render_Glyph: %i\n", fterr);
         abort();
     }
@@ -306,7 +315,7 @@ void sui_debug_print_atlas(sui_font *font)
         w = (font->metrics[i].width + 63) / 64;
         h = (font->metrics[i].height + 63) / 64;
         assert(h <= font->height);
-        unsigned diff = font->height - h;
+        unsigned diff = 0; //font->height - h;
         sui_debug_print_image(font->data + font->width*font->height*i + font->width*diff, w, h, font->width);
         sui_repeat_print(font->width, '^');
     }
@@ -316,7 +325,9 @@ static void draw_text(sui_cmd cmd, sui_renderer *r)
 {
     struct sui_renderer_text *text = &r->text;
     sui_layout *l = cmd.data.text.layout;
-    float em = cmd.data.text.em;
+    float em2ss = cmd.data.text.em;
+    float fu2em = 1.0 / l->font->face->units_per_EM;
+    float fu2ss = em2ss * fu2em;
 
     assert(l->align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
     glUseProgram(text->shader.program);
@@ -330,20 +341,19 @@ static void draw_text(sui_cmd cmd, sui_renderer *r)
     for (unsigned i = 0; i < l->glyph_count; i++) {
         unsigned id = sui_font_getGlyph(l->font, l->glyph_info[i].codepoint);
         FT_Glyph_Metrics *metrics = &l->font->metrics[id];
-        const float s = 64.0*64.0;
-        int gx = pen_x + metrics->horiBearingX;
-        int gy = pen_y + metrics->horiBearingY;
-        float x = (em * gx / s) + cmd.mat.data[2];
-        float y = (em * gy / s) + cmd.mat.data[5];
-        float w = em * metrics->width / s;
-        float h = em * metrics->height / s;
+        float p2ss = em2ss / (64.0*glyph_size);
+        float x = (p2ss * pen_x) + (fu2ss * metrics->horiBearingX) + cmd.mat.data[2];
+        float y = (p2ss * pen_y) + (fu2ss * metrics->horiBearingY) + cmd.mat.data[5];
+        // size of the region to draw
+        float w = fu2ss * metrics->width;
+        float h = fu2ss * metrics->height;
         sui_mat3 mat = sui_size(x, y, w, -h);
         glUniformMatrix3fv(text->upos, 1, GL_TRUE, mat.data);
         glUniform1i(text->uchar, id);
-        //assert(metrics->width && metrics->height);
+        // size of the texture region to sample
         glUniform2f(text->usize,
-                    metrics->width / (float)l->font->width / 64.0,
-                    metrics->height / (float)l->font->height / 64.0);
+                    (metrics->width+63) / 64 / (float)l->font->width,
+                    (metrics->height+63) / 64 / (float)l->font->height);
         tgl_quad_draw_once(&r->vbo);
         pen_x += l->glyph_pos[i].x_advance;
         pen_y += l->glyph_pos[i].y_advance;
