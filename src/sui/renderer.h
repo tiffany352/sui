@@ -67,12 +67,12 @@ typedef struct sui_renderer {
     tgl_quad vbo;
     struct sui_renderer_rect {
         tgl_shader shader;
-        GLint upos, ucolor;
+        GLint upos, umat, ucolor;
     } rect;
     struct sui_renderer_text {
         FT_Library library;
         tgl_shader shader;
-        GLint upos, ucolor, usampler, uchar, usize;
+        GLint upos, umat, ucolor, usampler, uchar, usize;
     } text;
 } sui_renderer;
 
@@ -82,6 +82,7 @@ unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint);
 bool sui_font_layout(sui_font *font, sui_layout *layout, sui_textfmt *fmt, const char *text, size_t len);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len);
+// Identity matrix if null
+void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len, const float *matrix);
 
 #endif

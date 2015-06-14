@@ -236,6 +236,7 @@ bool sui_renderer_init(sui_renderer *r, char **error)
             return false;
         }
         rect->upos = glGetUniformLocation(rect->shader.program, "upos");
+        rect->umat = glGetUniformLocation(rect->shader.program, "umat");
         rect->ucolor = glGetUniformLocation(rect->shader.program, "ucolor");
     }
 
@@ -256,6 +257,7 @@ bool sui_renderer_init(sui_renderer *r, char **error)
             return false;
         }
         text->upos = glGetUniformLocation(text->shader.program, "upos");
+        text->umat = glGetUniformLocation(text->shader.program, "umat");
         text->ucolor = glGetUniformLocation(text->shader.program, "ucolor");
         text->usampler = glGetUniformLocation(text->shader.program, "usampler");
         text->uchar = glGetUniformLocation(text->shader.program, "uchar");
@@ -273,11 +275,12 @@ bool sui_renderer_init(sui_renderer *r, char **error)
     return true;
 }
 
-static void draw_rect(sui_cmd cmd, sui_renderer *r)
+static void draw_rect(sui_cmd cmd, sui_renderer *r, const float *matrix)
 {
     struct sui_renderer_rect *rect = &r->rect;
     glUseProgram(rect->shader.program);
     glUniformMatrix3fv(rect->upos, 1, GL_TRUE, cmd.mat.data);
+    glUniformMatrix4fv(rect->umat, 1, GL_TRUE, matrix);
     unsigned char *col = cmd.col;
     glUniform4f(rect->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     tgl_quad_draw_once(&r->vbo);
@@ -321,7 +324,7 @@ void sui_debug_print_atlas(sui_font *font)
     }
 }
 
-static void draw_text(sui_cmd cmd, sui_renderer *r)
+static void draw_text(sui_cmd cmd, sui_renderer *r, const float *matrix)
 {
     struct sui_renderer_text *text = &r->text;
     sui_layout *l = cmd.data.text.layout;
@@ -332,6 +335,7 @@ static void draw_text(sui_cmd cmd, sui_renderer *r)
     assert(l->align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
     glUseProgram(text->shader.program);
     unsigned char *col = cmd.col;
+    glUniformMatrix4fv(text->umat, 1, GL_TRUE, matrix);
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     glUniform1i(text->usampler, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -360,20 +364,31 @@ static void draw_text(sui_cmd cmd, sui_renderer *r)
     }
 }
 
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
+void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len, const float *matrix)
 {
     (void)w, (void)h;
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    static const float ident[] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    };
+
+    if (!matrix) {
+        matrix = ident;
+    }
+
     tgl_vao_bind(&r->vao);
     for (unsigned i = 0; i < len; i++) {
         switch (cmds[i].type) {
         case SUI_RECT:
-            draw_rect(cmds[i], r);
+            draw_rect(cmds[i], r, matrix);
             break;
         case SUI_TEXT:
-            draw_text(cmds[i], r);
+            draw_text(cmds[i], r, matrix);
             break;
         }
     }

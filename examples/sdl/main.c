@@ -115,6 +115,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    static const float matrix[] = {
+         3.840990311088468, 0.0,        3.840990311088468, -0.9053301,
+         0.0,               12.071068,  0.0,               -1.2071068,
+        -2.16417525350868,  0.0,       -2.16417525350868,   6.9393938,
+        -2.12132034,        0,         -2.12132034,         7.0
+    };
+
     gettimeofday(&start, NULL);
 
     while (1) {
@@ -144,7 +151,7 @@ int main(int argc, char *argv[])
             sui_text(sui_size(-.5,.50, .20,.04), sui_col(255,255,255, 255), japanese_text, .10)
         };
 
-        sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd));
+        sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd), matrix);
 
         SDL_GL_SwapWindow(window);
     }
