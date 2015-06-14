@@ -135,6 +135,23 @@ unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint)
     return l;
 }
 
+void sui_font_free(sui_font *font)
+{
+    hb_font_destroy(font->hb_font);
+    hb_face_destroy(font->hb_face);
+    FT_Done_Face(font->face);
+    if (font->data) {
+        free(font->data);
+    }
+    if (font->metrics) {
+        free(font->metrics);
+    }
+    if (font->codepoints) {
+        free(font->codepoints);
+    }
+    glDeleteTextures(1, &font->tex);
+}
+
 typedef struct sui_iaabb {
     int lx, ly;
     int hx, hy;
@@ -206,6 +223,11 @@ bool sui_font_layout(sui_font *font, sui_layout *layout, sui_textfmt *fmt, const
     layout->height = bb.hy - bb.ly;
 
     return true;
+}
+
+void sui_layout_free(sui_layout *layout)
+{
+    hb_buffer_destroy(layout->buf);
 }
 
 extern const char sui_shader_quad_vert[];
@@ -393,4 +415,13 @@ void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, s
         }
     }
     glDisable(GL_BLEND);
+}
+
+void sui_renderer_free(sui_renderer *r)
+{
+    tgl_vao_free(&r->vao);
+    tgl_quad_free(&r->vbo);
+    //tgl_shader_free(&r->rect.shader);
+    //tgl_shader_free(&r->text.shader);
+    FT_Done_FreeType(r->text.library);
 }

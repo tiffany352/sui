@@ -79,10 +79,13 @@ typedef struct sui_renderer {
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;
 unsigned sui_font_getGlyph(sui_font *font, unsigned codepoint);
+void sui_font_free(sui_font *font);
 bool sui_font_layout(sui_font *font, sui_layout *layout, sui_textfmt *fmt, const char *text, size_t len);
+void sui_layout_free(sui_layout *layout);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
 // Identity matrix if null
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len, const float *matrix);
+void sui_renderer_free(sui_renderer *r);
 
 #endif

@@ -153,9 +153,15 @@ int main(int argc, char *argv[])
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf)/sizeof(sui_cmd), matrix);
 
+        sui_layout_free(curtime_text);
+
         SDL_GL_SwapWindow(window);
     }
  quit:
+    sui_layout_free(english_text);
+    sui_layout_free(japanese_text);
+    sui_font_free(georgia);
+    sui_font_free(meirio);
     SDL_GL_DeleteContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();
