@@ -297,11 +297,11 @@ bool sui_renderer_init(sui_renderer *r, char **error)
     return true;
 }
 
-static void draw_rect(sui_cmd cmd, sui_renderer *r, const float *matrix)
+static void draw_rect(sui_cmd cmd, sui_renderer *r, float w, float h, const float *matrix)
 {
     struct sui_renderer_rect *rect = &r->rect;
     glUseProgram(rect->shader.program);
-    glUniformMatrix3fv(rect->upos, 1, GL_TRUE, cmd.mat.data);
+    glUniformMatrix3fv(rect->upos, 1, GL_TRUE, sui_translate(sui_scale(cmd.mat, 2/w, 2/h), -1, -1).data);
     glUniformMatrix4fv(rect->umat, 1, GL_TRUE, matrix);
     unsigned char *col = cmd.col;
     glUniform4f(rect->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
@@ -346,7 +346,7 @@ void sui_debug_print_atlas(sui_font *font)
     }
 }
 
-static void draw_text(sui_cmd cmd, sui_renderer *r, const float *matrix)
+static void draw_text(sui_cmd cmd, sui_renderer *r, float sw, float sh, const float *matrix)
 {
     struct sui_renderer_text *text = &r->text;
     sui_layout *l = cmd.data.text.layout;
@@ -373,7 +373,7 @@ static void draw_text(sui_cmd cmd, sui_renderer *r, const float *matrix)
         // size of the region to draw
         float w = fu2ss * metrics->width;
         float h = fu2ss * metrics->height;
-        sui_mat3 mat = sui_size(x, y, w, -h);
+        sui_mat3 mat = sui_translate(sui_scale(sui_size(x, y, w, -h), 2/sw, 2/sh), -1, -1);
         glUniformMatrix3fv(text->upos, 1, GL_TRUE, mat.data);
         glUniform1i(text->uchar, id);
         // size of the texture region to sample
@@ -386,7 +386,7 @@ static void draw_text(sui_cmd cmd, sui_renderer *r, const float *matrix)
     }
 }
 
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len, const float *matrix)
+void sui_renderer_draw(sui_renderer *r, float w, float h, sui_cmd *cmds, size_t len, const float *matrix)
 {
     (void)w, (void)h;
     glEnable(GL_BLEND);
@@ -407,10 +407,10 @@ void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, s
     for (unsigned i = 0; i < len; i++) {
         switch (cmds[i].type) {
         case SUI_RECT:
-            draw_rect(cmds[i], r, matrix);
+            draw_rect(cmds[i], r, w, h, matrix);
             break;
         case SUI_TEXT:
-            draw_text(cmds[i], r, matrix);
+            draw_text(cmds[i], r, w, h, matrix);
             break;
         }
     }

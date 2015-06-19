@@ -85,7 +85,7 @@ void sui_layout_free(sui_layout *layout);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
 // Identity matrix if null
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len, const float *matrix);
+void sui_renderer_draw(sui_renderer *r, float w, float h, struct sui_cmd *cmds, size_t len, const float *matrix);
 void sui_renderer_free(sui_renderer *r);
 
 #endif

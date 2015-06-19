@@ -45,6 +45,16 @@ static inline sui_mat3 sui_translate(sui_mat3 m, float x, float y)
     return mat;
 }
 
+static inline sui_mat3 sui_scale(sui_mat3 m, float w, float h)
+{
+    sui_mat3 mat = {{
+            m.data[0]*w, m.data[1]*w, m.data[2]*w,
+            m.data[3]*h, m.data[4]*h, m.data[5]*h,
+            m.data[6]*1, m.data[7]*1, m.data[8]*1
+        }};
+    return mat;
+}
+
 static inline sui_cmd sui_rect(sui_mat3 mat, unsigned char col[4])
 {
     sui_cmd cmd = {
