@@ -55,6 +55,25 @@ static inline sui_mat3 sui_scale(sui_mat3 m, float w, float h)
     return mat;
 }
 
+static inline float sui_dot3(float a[3], float b[3])
+{
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+}
+
+static inline sui_mat3 sui_mul(sui_mat3 a, sui_mat3 b)
+{
+    sui_mat3 res;
+#define sui_idx(m, c,r) m.data[r*3+c]
+    for (unsigned i = 0; i < 3; i++) {
+        for (unsigned j = 0; j < 3; j++) {
+            float col[3] = { sui_idx(b, j,0), sui_idx(b, j,1), sui_idx(b, j,2) };
+            sui_idx(res, j,i) = sui_dot3(&sui_idx(a, 0,i), col);
+        }
+    }
+#undef sui_idx
+    return res;
+}
+
 static inline sui_cmd sui_rect(sui_mat3 mat, unsigned char col[4])
 {
     sui_cmd cmd = {
