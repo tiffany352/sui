@@ -11,6 +11,20 @@
 #include "util.h"
 #include "widgets.h"
 
+struct sui_font;
+
+typedef struct sui_glyph {
+    // key
+    uint32_t codepoint;
+    unsigned size;
+    struct sui_font *font;
+    // data
+    GLuint tex;
+    // from freetype
+    unsigned width, rows;
+    unsigned left, top;
+} sui_glyph;
+
 typedef struct sui_font {
     FT_Face face;
     hb_font_t *hb_font;
@@ -44,6 +58,8 @@ typedef struct sui_renderer {
         FT_Library library;
         tgl_shader shader;
         GLint upos, ucolor, usampler;
+        sui_glyph *glyphs;
+        unsigned glyphs_size, glyphs_capacity;
     } text;
 } sui_renderer;
 

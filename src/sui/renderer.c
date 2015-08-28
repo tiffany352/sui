@@ -164,6 +164,80 @@ void sui_renderer_free(sui_renderer *r)
     //tgl_shader_free(&r->rect.shader);
     //tgl_shader_free(&r->text.shader);
     FT_Done_FreeType(r->text.library);
+    for (unsigned i = 0; i < r->text.glyphs_size; i++) {
+        glDeleteTextures(1, &r->text.glyphs[i].tex);
+    }
+    free(r->text.glyphs);
+}
+
+sui_glyph *sui_renderer_get_glyph(sui_renderer *r, uint32_t codepoint, unsigned size, sui_font *font)
+{
+    // perform a binary search
+    int min = 0, max = r->text.glyphs_size - 1;
+    while (min <= max) {
+        int mid = min + (max-min)/2;
+        sui_glyph *glyph = &r->text.glyphs[mid];
+        if (glyph->codepoint == codepoint && glyph->size == size && glyph->font == font) {
+            return glyph;
+        }
+        if (glyph->codepoint < codepoint ||
+            glyph->size < size ||
+            (uintptr_t)glyph->font < (uintptr_t)font) {
+            min = mid + 1;
+        } else {
+            max = mid - 1;
+        }
+    }
+    assert(min == max + 1);
+    if (r->text.glyphs_size == r->text.glyphs_capacity) {
+        size_t new_capacity = r->text.glyphs_capacity? r->text.glyphs_capacity * 2 : 64;
+        sui_glyph *glyphs = calloc(new_capacity, sizeof(sui_glyph));
+        memcpy(glyphs, r->text.glyphs, r->text.glyphs_size * sizeof(sui_glyph));
+        r->text.glyphs_capacity = new_capacity;
+        free(r->text.glyphs);
+        r->text.glyphs = glyphs;
+    }
+    memmove(r->text.glyphs + min + 1,
+            r->text.glyphs + min,
+            (r->text.glyphs_size - min) * sizeof(sui_glyph));
+    r->text.glyphs_size++;
+    sui_glyph *glyph = &r->text.glyphs[min];
+    glyph->codepoint = codepoint;
+    glyph->size = size;
+    glyph->font = font;
+
+    FT_Error fterr;
+    FT_Face face = font->face;
+    if ((fterr = FT_Set_Pixel_Sizes(face, 0, size))) {
+        printf("FT_Set_Char_Size: %i\n", fterr);
+        abort();
+    }
+    if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
+        printf("FT_Load_Glyph: %i\n", fterr);
+        abort();
+    }
+    FT_GlyphSlotRec *ftglyph = face->glyph;
+    if (ftglyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(ftglyph, FT_RENDER_MODE_NORMAL))) {
+        printf("FT_Render_Glyph: %i\n", fterr);
+        abort();
+    }
+    glyph->left = ftglyph->bitmap_left;
+    glyph->top = ftglyph->bitmap_top;
+    FT_Bitmap *bm = &ftglyph->bitmap;
+    glyph->width = bm->width;
+    glyph->rows = bm->rows;
+    glGenTextures(1, &glyph->tex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, glyph->tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bm->width, bm->rows, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    for (unsigned i = 0; i < bm->rows; i++) {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, i, bm->width, 1, GL_RED, GL_UNSIGNED_BYTE,
+                        bm->buffer + bm->pitch * i);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    return glyph;
 }
 
 static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
@@ -207,6 +281,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         return;
     }
 
+    glActiveTexture(GL_TEXTURE0);
     glUseProgram(text->shader.program);
     unsigned char *col = cmd.col;
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
@@ -215,48 +290,26 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     for (unsigned i = 0; i < layout->count; i++) {
         // not a unicode codepoint.
         unsigned codepoint = layout->infos[i].codepoint;
-        if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
-            printf("FT_Load_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_GlyphSlotRec *glyph = face->glyph;
-        if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
-            printf("FT_Render_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_Bitmap *bm = &glyph->bitmap;
         unsigned top = layout->fmt.size;
+        sui_glyph *glyph = sui_renderer_get_glyph(r, codepoint, layout->fmt.size, layout->font);
         // prevents wrapping to the left side
         if (i == 0) {
-            pen_x = glyph->bitmap_left * 64;
+            pen_x = glyph->left * 64;
         }
-        GLuint tex;
-        glGenTextures(1, &tex);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bm->width, bm->rows, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
-        for (unsigned i = 0; i < bm->rows; i++) {
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, i, bm->width, 1, GL_RED, GL_UNSIGNED_BYTE,
-                            bm->buffer + bm->pitch * i);
-        }
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         float ux = (cmd.position.x +
                     pen_x / 64 -
                     layout->positions[i].x_offset +
-                    glyph->bitmap_left) / (float)w;
+                    glyph->left) / (float)w;
         float uy = 1.0 - (cmd.position.y +
                           pen_y / 64 -
                           layout->positions[i].y_offset -
-                          glyph->bitmap_top +
+                          glyph->top +
                           top) / (float)h;
-        float uw = bm->width / (float)w;
-        float uh = bm->rows / -(float)h;
+        float uw = glyph->width / (float)w;
+        float uh = glyph->rows / -(float)h;
         glUniform4f(text->upos, ux, uy, uw, uh);
+        glBindTexture(GL_TEXTURE_2D, glyph->tex);
         tgl_quad_draw_once(&r->vbo);
-        glDeleteTextures(1, &tex);
         pen_x += layout->positions[i].x_advance;
         pen_y += layout->positions[i].y_advance;
     }
