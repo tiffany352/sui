@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     sui_textfmt english = {
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
-        14,
+        36,
         georgia,
         "en",
         "Latin"
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     sui_textfmt japanese = {
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
-        14,
+        36,
         meirio,
         "jp",
         "Hiragana"
@@ -136,12 +136,12 @@ int main(int argc, char *argv[])
         };
 
         sui_lcmd lbuf[] = {
-            {fps_box,   root, 0,0, 0,0, 0,0,     60,20,  sui_wrect(sui_col(128, 50, 48, 255))},
+            {fps_box,   root, 0,0, 0,0, 0,0,     200,40, sui_wrect(sui_col(128, 50, 48, 255))},
             {white_box, root, 0,0, 0,0, 780,550, 20,50,  sui_wrect(sui_col(255,255,255, 255))},
             {text_box,  root, 0,0, 0,0, 100,300, 200,40, sui_wrect(sui_col( 25,190, 50, 255))},
             {fps_label, fps_box,  0,0, 1,0, 0,0,     0,40,   sui_wtext(sui_col(255,255,255, 255), english, curtime)},
             {en_label,  text_box, 0,0, 1,0, 0,0,     0,40,   sui_wtext(sui_col(255,255,255, 255), english, "hello world")},
-            {ja_label,  text_box, 0,0, 1,0, 0,20,    0,40,   sui_wtext(sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")}
+            {ja_label,  text_box, 0,0, 1,0, 0,40,    0,40,   sui_wtext(sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")}
         };
 #define size sizeof(lbuf)/sizeof(sui_lcmd)
 
