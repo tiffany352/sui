@@ -70,19 +70,17 @@ int main(int argc, char *argv[])
     char *error;
     sui_font georgia[1], meirio[1];
     struct timeval start, tv;
-    sui_textfmt english = {
+    sui_layout_format english = {
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
         36,
-        georgia,
         "en",
         "Latin"
     };
-    sui_textfmt japanese = {
+    sui_layout_format japanese = {
         SUI_ALIGN_TOPLEFT,
         SUI_DIR_LTR,
         36,
-        meirio,
         "jp",
         "Hiragana"
     };
@@ -107,6 +105,20 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    sui_layout hello_english, hello_japanese;
+    const char *english_text = "hello world";
+    if (!sui_layout_init(&hello_english, georgia, &english, english_text, strlen(english_text), &error)) {
+        printf("%s\n", error);
+        free(error);
+        return 1;
+    }
+    const char *japanese_text = "こんにちは、世界中のみなさん";
+    if (!sui_layout_init(&hello_japanese, meirio, &japanese, japanese_text, strlen(japanese_text), &error)) {
+        printf("%s\n", error);
+        free(error);
+        return 1;
+    }
+
     gettimeofday(&start, NULL);
 
     while (1) {
@@ -124,6 +136,13 @@ int main(int argc, char *argv[])
         char curtime[30];
         sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
 
+        sui_layout curtime_layout;
+        if (!sui_layout_init(&curtime_layout, georgia, &english, curtime, strlen(curtime), &error)) {
+            printf("%s\n", error);
+            free(error);
+            return 1;
+        }
+
         uint8_t white[] = {255,255,255, 255};
         uint8_t green[] = { 25,190, 50, 255};
         uint8_t red[]   = {128, 50, 48, 255};
@@ -132,16 +151,20 @@ int main(int argc, char *argv[])
             sui_rect(red,   sui_mkpoint(  0,  0), sui_mkpoint(200, 40)),
             sui_rect(white, sui_mkpoint(780,550), sui_mkpoint( 20, 50)),
             sui_rect(green, sui_mkpoint(100,300), sui_mkpoint(200, 40)),
-            sui_text(white, sui_mkpoint(  0,  0), english, curtime),
-            sui_text(white, sui_mkpoint(100,300), english, "hello world"),
-            sui_text(red,   sui_mkpoint(100,340), japanese, "こんにちは、世界中のみなさん")
+            sui_text(white, sui_mkpoint(  0,  0), &curtime_layout),
+            sui_text(white, sui_mkpoint(100,300), &hello_english),
+            sui_text(red,   sui_mkpoint(100,340), &hello_japanese)
         };
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf) / sizeof(sui_cmd));
 
+        sui_layout_free(&curtime_layout);
+
         SDL_GL_SwapWindow(window);
     }
  quit:
+    sui_layout_free(&hello_english);
+    sui_layout_free(&hello_japanese);
     SDL_GL_DeleteContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();

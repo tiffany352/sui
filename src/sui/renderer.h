@@ -29,6 +29,8 @@ typedef struct sui_layout {
     unsigned count;
     hb_glyph_info_t *infos;
     hb_glyph_position_t *positions;
+    sui_font *font;
+    sui_layout_format fmt;
 } sui_layout;
 
 typedef struct sui_renderer {
@@ -46,7 +48,8 @@ typedef struct sui_renderer {
 } sui_renderer;
 
 bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format *fmt,
-                     const char *text, size_t length) WARN_UNUSED;
+                     const char *text, size_t length, char **error) WARN_UNUSED;
+void sui_layout_free(sui_layout *layout);
 
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;

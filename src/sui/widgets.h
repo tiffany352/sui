@@ -19,14 +19,6 @@ typedef enum sui_direction {
     SUI_DIR_BTT,
 } sui_direction;
 
-typedef struct sui_textfmt {
-    sui_align align;
-    sui_direction dir;
-    unsigned size;
-    struct sui_font *font;
-    const char *lang, *script;
-} sui_textfmt;
-
 #define sui_col(r,g,b,a) (uint8_t[]){r,g,b,a}
 
 enum sui_cmd_type {
@@ -40,6 +32,8 @@ typedef struct sui_point {
 
 #define sui_mkpoint(x,y) ((sui_point) { x, y })
 
+struct sui_layout;
+
 typedef struct sui_cmd {
     enum sui_cmd_type type;
     unsigned char col[4];
@@ -47,10 +41,7 @@ typedef struct sui_cmd {
     union {
         int dummy;
         sui_point rect_size;
-        struct {
-            sui_textfmt fmt;
-            const char *text;
-        } text;
+        struct sui_layout *text;
     } data;
 } sui_cmd;
 
@@ -66,7 +57,7 @@ static inline sui_cmd sui_rect(unsigned char col[4], sui_point position, sui_poi
     return cmd;
 }
 
-static inline sui_cmd sui_text(unsigned char col[4], sui_point position, sui_textfmt fmt, const char *text)
+static inline sui_cmd sui_text(unsigned char col[4], sui_point position, struct sui_layout *layout)
 {
     sui_cmd cmd = {
         SUI_TEXT,
@@ -74,8 +65,7 @@ static inline sui_cmd sui_text(unsigned char col[4], sui_point position, sui_tex
         position,
         {0}
     };
-    cmd.data.text.fmt = fmt;
-    cmd.data.text.text = text;
+    cmd.data.text = layout;
     return cmd;
 }
 

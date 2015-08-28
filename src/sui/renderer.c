@@ -13,7 +13,7 @@ enum sui_arrattribs {
 };
 
 bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format *fmt,
-                     const char *text, size_t length)
+                     const char *text, size_t length, char **error)
 {
     static const int text_dir_table[] = {
         HB_DIRECTION_LTR,
@@ -23,18 +23,25 @@ bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format
     };
 
     memset(layout, 0, sizeof(sui_layout));
+    layout->fmt = *fmt;
+    layout->font = font;
+    FT_Error fterr;
+    if ((fterr = FT_Set_Pixel_Sizes(font->face, 0, fmt->size))) {
+        *error = sui_aprintf("FT_Set_Char_Size: %i\n", fterr);
+        return false;
+    }
     layout->buffer = hb_buffer_create();
     hb_buffer_set_unicode_funcs(layout->buffer, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(layout->buffer, text_dir_table[fmt->dir]);
     hb_script_t script = hb_script_from_string(fmt->script, -1);
     if (script == HB_SCRIPT_INVALID || script == HB_SCRIPT_UNKNOWN) {
-        printf("Invalid script: %s\n", fmt->script);
+        *error = sui_aprintf("Invalid script: %s\n", fmt->script);
         return false;
     }
     hb_buffer_set_script(layout->buffer, script);
     hb_language_t lang = hb_language_from_string(fmt->lang, -1);
     if (lang == HB_LANGUAGE_INVALID) {
-        printf("Invalid language: %s\n", fmt->lang);
+        *error = sui_aprintf("Invalid language: %s\n", fmt->lang);
         return false;
     }
     hb_buffer_set_language(layout->buffer, lang);
@@ -45,6 +52,11 @@ bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format
     layout->positions = hb_buffer_get_glyph_positions(layout->buffer, &layout->count);
 
     return true;
+}
+
+void sui_layout_free(sui_layout *layout)
+{
+    hb_buffer_destroy(layout->buffer);
 }
 
 static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face face)
@@ -205,52 +217,20 @@ static void simple_blit(unsigned char *dst, const unsigned char *src,
 static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
 {
     struct sui_renderer_text *text = &r->text;
-    static const int text_dir_table[] = {
-        HB_DIRECTION_LTR,
-        HB_DIRECTION_RTL,
-        HB_DIRECTION_TTB,
-        HB_DIRECTION_BTT
-    };
-
-    sui_textfmt fmt = cmd.data.text.fmt;
-    FT_Face face = fmt.font->face;
+    sui_layout *layout = cmd.data.text;
+    FT_Face face = layout->font->face;
     FT_Error fterr;
-
-    if ((fterr = FT_Set_Pixel_Sizes(face, 0, fmt.size))) {
+    if ((fterr = FT_Set_Pixel_Sizes(face, 0, layout->fmt.size))) {
         printf("FT_Set_Char_Size: %i\n", fterr);
         abort();
         return;
     }
-    hb_buffer_t *buf = hb_buffer_create();
-    hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
-    hb_buffer_set_direction(buf, text_dir_table[fmt.dir]);
-    hb_script_t script = hb_script_from_string(fmt.script, -1);
-    if (script == HB_SCRIPT_INVALID || script == HB_SCRIPT_UNKNOWN) {
-        printf("Invalid script: %s\n", fmt.script);
-        abort();
-        return;
-    }
-    hb_buffer_set_script(buf, script);
-    hb_language_t lang = hb_language_from_string(fmt.lang, -1);
-    if (lang == HB_LANGUAGE_INVALID) {
-        printf("Invalid language: %s\n", fmt.lang);
-        abort();
-        return;
-    }
-    hb_buffer_set_language(buf, lang);
-    const char *msg = cmd.data.text.text;
-    hb_buffer_add_utf8(buf, msg, strlen(msg), 0, strlen(msg));
-    hb_shape(fmt.font->hb_font, buf, NULL, 0);
-
-    unsigned glyph_count;
-    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
-    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
     unsigned str_width = 0, str_height = 0;
     int xadv = 0, yadv = 0;
-    for (unsigned i = 0; i < glyph_count; i++) {
+    for (unsigned i = 0; i < layout->count; i++) {
         // not a unicode codepoint.
-        unsigned codepoint = glyph_info[i].codepoint;
+        unsigned codepoint = layout->infos[i].codepoint;
         if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
             printf("FT_Load_Glyph: %i\n", fterr);
             abort();
@@ -263,7 +243,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
             return;
         }
         FT_Bitmap *bm = &glyph->bitmap;
-        unsigned top = fmt.size;
+        unsigned top = layout->fmt.size;
         int px = xadv + bm->width*64 - glyph->bitmap_left*64;
         int py = yadv + bm->rows*64 - glyph->bitmap_top*64 + top*64;
         if (px > (int)str_width) {
@@ -272,20 +252,20 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         if (py > (int)str_height) {
             str_height = py;
         }
-        xadv += glyph_pos[i].x_advance;
-        yadv += glyph_pos[i].y_advance;
+        xadv += layout->positions[i].x_advance;
+        yadv += layout->positions[i].y_advance;
     }
     str_width = (str_width + 63) / 64;
-    // force the width to be divisible by four
-    // for some reason the intel driver freaks the fuck out when you don't do this
+    // GL defaults to requiring an alignment of 4 bytes for each row,
+    // so we just pad the width of the image
     str_width = (str_width+3) & ~3;
     str_height = (str_height + 63) / 64;
 
     unsigned char *img = calloc(str_width * str_height, 1);
     int pen_x = 0, pen_y = 0;
-    for (unsigned i = 0; i < glyph_count; i++) {
+    for (unsigned i = 0; i < layout->count; i++) {
         // not a unicode codepoint.
-        unsigned codepoint = glyph_info[i].codepoint;
+        unsigned codepoint = layout->infos[i].codepoint;
         if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
             printf("FT_Load_Glyph: %i\n", fterr);
             abort();
@@ -298,19 +278,18 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
             return;
         }
         FT_Bitmap *bm = &glyph->bitmap;
-        unsigned top = fmt.size;
+        unsigned top = layout->fmt.size;
         // prevents wrapping to the left side
         if (i == 0) {
             pen_x = glyph->bitmap_left * 64;
         }
         simple_blit(img, bm->buffer,
                     str_width, str_height, bm->width, bm->rows,
-                    pen_x/64 - glyph_pos[i].x_offset - glyph->bitmap_left,
-                    pen_y/64 - glyph_pos[i].y_offset - glyph->bitmap_top + top);
-        pen_x += glyph_pos[i].x_advance;
-        pen_y += glyph_pos[i].y_advance;
+                    pen_x/64 - layout->positions[i].x_offset - glyph->bitmap_left,
+                    pen_y/64 - layout->positions[i].y_offset - glyph->bitmap_top + top);
+        pen_x += layout->positions[i].x_advance;
+        pen_y += layout->positions[i].y_advance;
     }
-    hb_buffer_destroy(buf);
 
     GLuint tex;
     glGenTextures(1, &tex);
@@ -322,7 +301,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     free(img);
 
     glUseProgram(text->shader.program);
-    assert(fmt.align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
+    assert(layout->fmt.align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
     float ux = cmd.position.x / (float)w;
     float uy = 1.0 - cmd.position.y / (float)h;
     float uw = str_width / (float)w;
