@@ -28,6 +28,20 @@ typedef struct sui_font {
     hb_face_t *hb_face;
 } sui_font;
 
+typedef struct sui_layout_format {
+    sui_align align;
+    sui_direction dir;
+    unsigned size;
+    const char *lang, *script;
+} sui_layout_format;
+
+typedef struct sui_layout {
+    hb_buffer_t *buffer;
+    unsigned count;
+    hb_glyph_info_t *infos;
+    hb_glyph_position_t *positions;
+} sui_layout;
+
 typedef struct sui_renderer {
     tgl_vao vao;
     tgl_quad vbo;
@@ -41,6 +55,9 @@ typedef struct sui_renderer {
         GLint upos, ucolor, usampler;
     } text;
 } sui_renderer;
+
+bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format *fmt,
+                     const char *text, size_t length) WARN_UNUSED;
 
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;

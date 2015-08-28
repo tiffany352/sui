@@ -12,6 +12,41 @@ enum sui_arrattribs {
     SUI_RECT_POS
 };
 
+bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format *fmt,
+                     const char *text, size_t length)
+{
+    static const int text_dir_table[] = {
+        HB_DIRECTION_LTR,
+        HB_DIRECTION_RTL,
+        HB_DIRECTION_TTB,
+        HB_DIRECTION_BTT
+    };
+
+    memset(layout, 0, sizeof(sui_layout));
+    layout->buffer = hb_buffer_create();
+    hb_buffer_set_unicode_funcs(layout->buffer, hb_icu_get_unicode_funcs());
+    hb_buffer_set_direction(layout->buffer, text_dir_table[fmt->dir]);
+    hb_script_t script = hb_script_from_string(fmt->script, -1);
+    if (script == HB_SCRIPT_INVALID || script == HB_SCRIPT_UNKNOWN) {
+        printf("Invalid script: %s\n", fmt->script);
+        return false;
+    }
+    hb_buffer_set_script(layout->buffer, script);
+    hb_language_t lang = hb_language_from_string(fmt->lang, -1);
+    if (lang == HB_LANGUAGE_INVALID) {
+        printf("Invalid language: %s\n", fmt->lang);
+        return false;
+    }
+    hb_buffer_set_language(layout->buffer, lang);
+    hb_buffer_add_utf8(layout->buffer, text, length, 0, length);
+    hb_shape(font->hb_font, layout->buffer, NULL, 0);
+
+    layout->infos = hb_buffer_get_glyph_infos(layout->buffer, &layout->count);
+    layout->positions = hb_buffer_get_glyph_positions(layout->buffer, &layout->count);
+
+    return true;
+}
+
 static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face face)
 {
     (void)r, (void)error;
