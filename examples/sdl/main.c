@@ -5,7 +5,6 @@
 #include "tgl/tgl.h"
 #include "sui/widgets.h"
 #include "sui/renderer.h"
-#include "sui/layout.h"
 
 static GLvoid error_cb(GLenum source, GLenum type, GLuint id, GLenum severity,
                        GLsizei length, const GLchar* message, GLvoid* user)
@@ -125,35 +124,20 @@ int main(int argc, char *argv[])
         char curtime[30];
         sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
 
-        enum {
-            root,
-            fps_box,
-            text_box,
-            white_box,
-            fps_label,
-            en_label,
-            ja_label
+        uint8_t white[] = {255,255,255, 255};
+        uint8_t green[] = { 25,190, 50, 255};
+        uint8_t red[]   = {128, 50, 48, 255};
+
+        sui_cmd buf[] = {
+            sui_rect(red,   sui_mkpoint(  0,  0), sui_mkpoint(200, 40)),
+            sui_rect(white, sui_mkpoint(780,550), sui_mkpoint( 20, 50)),
+            sui_rect(green, sui_mkpoint(100,300), sui_mkpoint(200, 40)),
+            sui_text(white, sui_mkpoint(  0,  0), english, curtime),
+            sui_text(white, sui_mkpoint(100,300), english, "hello world"),
+            sui_text(red,   sui_mkpoint(100,340), japanese, "こんにちは、世界中のみなさん")
         };
 
-        sui_lcmd lbuf[] = {
-            {fps_box,   root, 0,0, 0,0, 0,0,     200,40, sui_wrect(sui_col(128, 50, 48, 255))},
-            {white_box, root, 0,0, 0,0, 780,550, 20,50,  sui_wrect(sui_col(255,255,255, 255))},
-            {text_box,  root, 0,0, 0,0, 100,300, 200,40, sui_wrect(sui_col( 25,190, 50, 255))},
-            {fps_label, fps_box,  0,0, 1,0, 0,0,     0,40,   sui_wtext(sui_col(255,255,255, 255), english, curtime)},
-            {en_label,  text_box, 0,0, 1,0, 0,0,     0,40,   sui_wtext(sui_col(255,255,255, 255), english, "hello world")},
-            {ja_label,  text_box, 0,0, 1,0, 0,40,    0,40,   sui_wtext(sui_col(255,255,255, 255), japanese, "こんにちは、世界中のみなさん")}
-        };
-#define size sizeof(lbuf)/sizeof(sui_lcmd)
-
-        sui_dcmd dbuf[size];
-
-        char *error = NULL;
-        if (!sui_layout(lbuf, dbuf, size, 800, 600, &error)) {
-            printf("sui_layout: %s", error);
-            free(error);
-            goto quit;
-        }
-        sui_renderer_draw(r, 800, 600, dbuf, size);
+        sui_renderer_draw(r, 800, 600, buf, sizeof(buf) / sizeof(sui_cmd));
 
         SDL_GL_SwapWindow(window);
     }

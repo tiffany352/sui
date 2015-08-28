@@ -34,33 +34,44 @@ enum sui_cmd_type {
     SUI_TEXT,
 };
 
-typedef struct sui_wcmd {
+typedef struct sui_point {
+    unsigned x, y;
+} sui_point;
+
+#define sui_mkpoint(x,y) ((sui_point) { x, y })
+
+typedef struct sui_cmd {
     enum sui_cmd_type type;
     unsigned char col[4];
+    sui_point position;
     union {
         int dummy;
+        sui_point rect_size;
         struct {
             sui_textfmt fmt;
             const char *text;
         } text;
     } data;
-} sui_wcmd;
+} sui_cmd;
 
-static inline sui_wcmd sui_wrect(unsigned char col[4])
+static inline sui_cmd sui_rect(unsigned char col[4], sui_point position, sui_point size)
 {
-    sui_wcmd cmd = {
+    sui_cmd cmd = {
         SUI_RECT,
         {col[0], col[1], col[2], col[3]},
+        position,
         {0}
     };
+    cmd.data.rect_size = size;
     return cmd;
 }
 
-static inline sui_wcmd sui_wtext(unsigned char col[4], sui_textfmt fmt, const char *text)
+static inline sui_cmd sui_text(unsigned char col[4], sui_point position, sui_textfmt fmt, const char *text)
 {
-    sui_wcmd cmd = {
+    sui_cmd cmd = {
         SUI_TEXT,
         {col[0], col[1], col[2], col[3]},
+        position,
         {0}
     };
     cmd.data.text.fmt = fmt;
