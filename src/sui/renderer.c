@@ -87,6 +87,13 @@ bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void
     return font_fromfont(font, r, error, font->face);
 }
 
+void sui_font_free(sui_font *font)
+{
+    hb_font_destroy(font->hb_font);
+    hb_face_destroy(font->hb_face);
+    FT_Done_Face(font->face);
+}
+
 extern const char sui_shader_quad_vert[];
 extern const char sui_shader_rect_frag[];
 extern const char sui_shader_text_frag[];
@@ -148,6 +155,15 @@ bool sui_renderer_init(sui_renderer *r, char **error)
     }
 
     return true;
+}
+
+void sui_renderer_free(sui_renderer *r)
+{
+    tgl_vao_free(&r->vao);
+    tgl_quad_free(&r->vbo);
+    //tgl_shader_free(&r->rect.shader);
+    //tgl_shader_free(&r->text.shader);
+    FT_Done_FreeType(r->text.library);
 }
 
 static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)

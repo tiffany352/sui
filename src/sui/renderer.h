@@ -53,8 +53,10 @@ void sui_layout_free(sui_layout *layout);
 
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;
+void sui_font_free(sui_font *font);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
+void sui_renderer_free(sui_renderer *r);
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len);
 
 #endif

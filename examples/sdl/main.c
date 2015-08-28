@@ -163,8 +163,11 @@ int main(int argc, char *argv[])
         SDL_GL_SwapWindow(window);
     }
  quit:
+    sui_font_free(georgia);
+    sui_font_free(meirio);
     sui_layout_free(&hello_english);
     sui_layout_free(&hello_japanese);
+    sui_renderer_free(r);
     SDL_GL_DeleteContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();
