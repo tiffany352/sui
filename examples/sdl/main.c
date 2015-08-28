@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     SDL_Event ev;
     sui_renderer r[1];
     char *error;
-    sui_font georgia[1], meirio[1];
+    sui_font sanspro[1], meirio[1], droidsans[1];
     struct timeval start, tv;
     sui_layout_format english = {
         SUI_ALIGN_TOPLEFT,
@@ -84,6 +84,13 @@ int main(int argc, char *argv[])
         "jp",
         "Hiragana"
     };
+    sui_layout_format arabic = {
+        SUI_ALIGN_TOPLEFT,
+        SUI_DIR_RTL,
+        36,
+        "ar",
+        "Arabic"
+    };
 
     glDebugMessageCallback((GLDEBUGPROC)&error_cb, NULL);
 
@@ -93,7 +100,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfile(georgia, r, &error, "georgia.ttf")) {
+    if (!sui_font_fromfile(sanspro, r, &error, "/usr/share/fonts/adobe-source-sans-pro/SourceSansPro-Light.otf")) {
         printf("%s\n", error);
         free(error);
         return 1;
@@ -105,15 +112,27 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    sui_layout hello_english, hello_japanese;
+    if (!sui_font_fromfile(droidsans, r, &error, "/usr/share/fonts/TTF/DroidSansArabic.ttf")) {
+        printf("%s\n", error);
+        free(error);
+        return 1;
+    }
+
+    sui_layout hello_english, hello_japanese, hello_arabic;
     const char *english_text = "hello world";
-    if (!sui_layout_init(&hello_english, georgia, &english, english_text, strlen(english_text), &error)) {
+    if (!sui_layout_init(&hello_english, sanspro, &english, english_text, strlen(english_text), &error)) {
         printf("%s\n", error);
         free(error);
         return 1;
     }
     const char *japanese_text = "こんにちは、世界中のみなさん";
     if (!sui_layout_init(&hello_japanese, meirio, &japanese, japanese_text, strlen(japanese_text), &error)) {
+        printf("%s\n", error);
+        free(error);
+        return 1;
+    }
+    const char *arabic_text = "مرحبا بالعالم";
+    if (!sui_layout_init(&hello_arabic, droidsans, &arabic, arabic_text, strlen(arabic_text), &error)) {
         printf("%s\n", error);
         free(error);
         return 1;
@@ -137,7 +156,7 @@ int main(int argc, char *argv[])
         sprintf(curtime, "%ld.%05ld", tv.tv_sec, tv.tv_usec);
 
         sui_layout curtime_layout;
-        if (!sui_layout_init(&curtime_layout, georgia, &english, curtime, strlen(curtime), &error)) {
+        if (!sui_layout_init(&curtime_layout, sanspro, &english, curtime, strlen(curtime), &error)) {
             printf("%s\n", error);
             free(error);
             return 1;
@@ -153,7 +172,8 @@ int main(int argc, char *argv[])
             sui_rect(green, sui_mkpoint(100,300), sui_mkpoint(200, 40)),
             sui_text(white, sui_mkpoint(  0,  0), &curtime_layout),
             sui_text(white, sui_mkpoint(100,300), &hello_english),
-            sui_text(red,   sui_mkpoint(100,340), &hello_japanese)
+            sui_text(red,   sui_mkpoint(100,340), &hello_japanese),
+            sui_text(white, sui_mkpoint(100,380), &hello_arabic)
         };
 
         sui_renderer_draw(r, 800, 600, buf, sizeof(buf) / sizeof(sui_cmd));
@@ -163,8 +183,9 @@ int main(int argc, char *argv[])
         SDL_GL_SwapWindow(window);
     }
  quit:
-    sui_font_free(georgia);
+    sui_font_free(sanspro);
     sui_font_free(meirio);
+    sui_font_free(droidsans);
     sui_layout_free(&hello_english);
     sui_layout_free(&hello_japanese);
     sui_renderer_free(r);
