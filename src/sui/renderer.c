@@ -195,41 +195,6 @@ void sui_debug_print_image(const unsigned char *src, unsigned w, unsigned h, uns
     }
 }
 
-static void simple_blit(unsigned char *dst, const unsigned char *src,
-                        unsigned dw, unsigned dh, unsigned sw, unsigned sh,
-                        int dx, int dy)
-{
-    if (sw == 0 || sh == 0) {
-        return;
-    }
-    if (-dx >= (int)sw || -dy >= (int)sh || dx >= (int)dw || dy >= (int)dh) {
-        printf("warning: completely clipped src\n");
-        return;
-    }
-    unsigned stride = 1;
-    unsigned spitch = sw;
-    unsigned dpitch = dw;
-    unsigned dxmax = dw - dx;
-    unsigned dymax = dh - dy;
-    unsigned sx = dx < 0? -dx : 0;
-    unsigned sy = dy < 0? -dy : 0;
-    unsigned w = dxmax < sw? dxmax : sw;
-    unsigned h = dymax < sh? dymax : sh;
-#ifndef NDEBUG
-    unsigned dend = dw*dh*stride;
-    unsigned send = sw*sh*stride;
-#endif
-    unsigned soffset = 0;
-    unsigned doffset = dpitch*dy + stride*dx;
-    for (unsigned y = sy; y < h; y++) {
-        unsigned dpos = doffset + dpitch*y + stride*sx;
-        unsigned spos = soffset + spitch*y + stride*sx;
-        unsigned line = w - sx;
-        assert(dst+dpos+line <= dst+dend && src+spos+line <= src+send);
-        memcpy(dst+dpos, src+spos, line*stride);
-    }
-}
-
 static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
 {
     struct sui_renderer_text *text = &r->text;
@@ -242,42 +207,10 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         return;
     }
 
-    unsigned str_width = 0, str_height = 0;
-    int xadv = 0, yadv = 0;
-    for (unsigned i = 0; i < layout->count; i++) {
-        // not a unicode codepoint.
-        unsigned codepoint = layout->infos[i].codepoint;
-        if ((fterr = FT_Load_Glyph(face, codepoint, FT_LOAD_DEFAULT))) {
-            printf("FT_Load_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_GlyphSlotRec *glyph = face->glyph;
-        if (glyph->format != FT_GLYPH_FORMAT_BITMAP && (fterr = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL))) {
-            printf("FT_Render_Glyph: %i\n", fterr);
-            abort();
-            return;
-        }
-        FT_Bitmap *bm = &glyph->bitmap;
-        unsigned top = layout->fmt.size;
-        int px = xadv + bm->width*64 - glyph->bitmap_left*64;
-        int py = yadv + bm->rows*64 - glyph->bitmap_top*64 + top*64;
-        if (px > (int)str_width) {
-            str_width = px;
-        }
-        if (py > (int)str_height) {
-            str_height = py;
-        }
-        xadv += layout->positions[i].x_advance;
-        yadv += layout->positions[i].y_advance;
-    }
-    str_width = (str_width + 63) / 64;
-    // GL defaults to requiring an alignment of 4 bytes for each row,
-    // so we just pad the width of the image
-    str_width = (str_width+3) & ~3;
-    str_height = (str_height + 63) / 64;
-
-    unsigned char *img = calloc(str_width * str_height, 1);
+    glUseProgram(text->shader.program);
+    unsigned char *col = cmd.col;
+    glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
+    glUniform1i(text->usampler, 0);
     int pen_x = 0, pen_y = 0;
     for (unsigned i = 0; i < layout->count; i++) {
         // not a unicode codepoint.
@@ -299,36 +232,34 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
         if (i == 0) {
             pen_x = glyph->bitmap_left * 64;
         }
-        simple_blit(img, bm->buffer,
-                    str_width, str_height, bm->width, bm->rows,
-                    pen_x/64 - layout->positions[i].x_offset + glyph->bitmap_left,
-                    pen_y/64 - layout->positions[i].y_offset - glyph->bitmap_top + top);
+        GLuint tex;
+        glGenTextures(1, &tex);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bm->width, bm->rows, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+        for (unsigned i = 0; i < bm->rows; i++) {
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, i, bm->width, 1, GL_RED, GL_UNSIGNED_BYTE,
+                            bm->buffer + bm->pitch * i);
+        }
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        float ux = (cmd.position.x +
+                    pen_x / 64 -
+                    layout->positions[i].x_offset +
+                    glyph->bitmap_left) / (float)w;
+        float uy = 1.0 - (cmd.position.y +
+                          pen_y / 64 -
+                          layout->positions[i].y_offset -
+                          glyph->bitmap_top +
+                          top) / (float)h;
+        float uw = bm->width / (float)w;
+        float uh = bm->rows / -(float)h;
+        glUniform4f(text->upos, ux, uy, uw, uh);
+        tgl_quad_draw_once(&r->vbo);
+        glDeleteTextures(1, &tex);
         pen_x += layout->positions[i].x_advance;
         pen_y += layout->positions[i].y_advance;
     }
-
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, str_width, str_height, 0, GL_RED, GL_UNSIGNED_BYTE, img);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    free(img);
-
-    glUseProgram(text->shader.program);
-    assert(layout->fmt.align == SUI_ALIGN_TOPLEFT && "TODO: Other alignments");
-    float ux = cmd.position.x / (float)w;
-    float uy = 1.0 - cmd.position.y / (float)h;
-    float uw = str_width / (float)w;
-    float uh = str_height / -(float)h;
-    glUniform4f(text->upos, ux, uy, uw, uh);
-    unsigned char *col = cmd.col;
-    glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
-    glUniform1i(text->usampler, 0);
-    tgl_quad_draw_once(&r->vbo);
-
-    glDeleteTextures(1, &tex);
 }
 
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
