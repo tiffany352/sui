@@ -46,6 +46,7 @@ typedef struct sui_layout {
     hb_glyph_position_t *positions;
     sui_font *font;
     sui_layout_format fmt;
+    sui_point origin, size;
 } sui_layout;
 
 typedef struct sui_renderer {

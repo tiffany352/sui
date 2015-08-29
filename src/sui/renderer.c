@@ -52,6 +52,34 @@ bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format
     layout->infos = hb_buffer_get_glyph_infos(layout->buffer, &layout->count);
     layout->positions = hb_buffer_get_glyph_positions(layout->buffer, &layout->count);
 
+    int pen_x = 0, pen_y = 0;
+    int lx = 0, ly = 0, hx = 0, hy = 0;
+    for (unsigned i = 0; i < layout->count; i++) {
+        uint32_t codepoint = layout->infos[i].codepoint;
+        if ((fterr = FT_Load_Glyph(font->face, codepoint, FT_LOAD_DEFAULT))) {
+            *error = sui_aprintf("FT_Load_Glyph: %i\n", fterr);
+            return false;
+        }
+
+        if (pen_x < lx) {
+            lx = pen_x;
+        }
+        if (pen_y < ly) {
+            ly = pen_y;
+        }
+        int w = font->face->glyph->metrics.width, h = font->face->glyph->metrics.height;
+        if (pen_x + w > hx) {
+            hx = pen_x + w;
+        }
+        if (pen_y + h > hy) {
+            hy = pen_y + h;
+        }
+        pen_x += layout->positions[i].x_advance;
+        pen_y += layout->positions[i].y_advance;
+    }
+    layout->origin = sui_mkpoint(-lx, -ly);
+    layout->size = sui_mkpoint(hx-lx, hy-ly);
+
     return true;
 }
 
