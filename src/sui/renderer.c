@@ -174,6 +174,7 @@ bool sui_renderer_init(sui_renderer *r, char **error)
         if (!tgl_link_program(rect->shader.program, error)) {
             return false;
         }
+        rect->mvp = glGetUniformLocation(rect->shader.program, "mvp");
         rect->upos = glGetUniformLocation(rect->shader.program, "upos");
         rect->ucolor = glGetUniformLocation(rect->shader.program, "ucolor");
     }
@@ -194,6 +195,7 @@ bool sui_renderer_init(sui_renderer *r, char **error)
         if (!tgl_link_program(text->shader.program, error)) {
             return false;
         }
+        text->mvp = glGetUniformLocation(text->shader.program, "mvp");
         text->upos = glGetUniformLocation(text->shader.program, "upos");
         text->ucolor = glGetUniformLocation(text->shader.program, "ucolor");
         text->usampler = glGetUniformLocation(text->shader.program, "usampler");
@@ -293,10 +295,12 @@ sui_glyph *sui_renderer_get_glyph(sui_renderer *r, uint32_t codepoint, unsigned 
     return glyph;
 }
 
-static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_rect(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r,
+                      const float transform[16], bool transpose)
 {
     struct sui_renderer_rect *rect = &r->rect;
     glUseProgram(rect->shader.program);
+    glUniformMatrix4fv(rect->mvp, 1, transpose, transform);
     float ux = cmd.position.x / (float)w;
     float uy = 1.0 - cmd.position.y / (float)h;
     float uw = cmd.data.rect_size.x / (float)w;
@@ -322,7 +326,8 @@ void sui_debug_print_image(const unsigned char *src, unsigned w, unsigned h, uns
     }
 }
 
-static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
+static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r,
+                      const float transform[16], bool transpose)
 {
     struct sui_renderer_text *text = &r->text;
     sui_layout *layout = cmd.data.text;
@@ -336,6 +341,7 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
 
     glActiveTexture(GL_TEXTURE0);
     glUseProgram(text->shader.program);
+    glUniformMatrix4fv(text->mvp, 1, transpose, transform);
     unsigned char *col = cmd.col;
     glUniform4f(text->ucolor, col[0] / 255.0, col[1] / 255.0, col[2] / 255.0, col[3] / 255.0);
     glUniform1i(text->usampler, 0);
@@ -368,7 +374,8 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r)
     }
 }
 
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len)
+void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, size_t len,
+                       const float transform[16], bool transpose)
 {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -377,10 +384,10 @@ void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, sui_cmd *cmds, s
     for (unsigned i = 0; i < len; i++) {
         switch (cmds[i].type) {
         case SUI_RECT:
-            draw_rect(cmds[i], w, h, r);
+            draw_rect(cmds[i], w, h, r, transform, transpose);
             break;
         case SUI_TEXT:
-            draw_text(cmds[i], w, h, r);
+            draw_text(cmds[i], w, h, r, transform, transpose);
             break;
         }
     }

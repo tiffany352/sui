@@ -53,12 +53,12 @@ typedef struct sui_renderer {
     tgl_quad vbo;
     struct sui_renderer_rect {
         tgl_shader shader;
-        GLint upos, ucolor;
+        GLint mvp, upos, ucolor;
     } rect;
     struct sui_renderer_text {
         FT_Library library;
         tgl_shader shader;
-        GLint upos, ucolor, usampler;
+        GLint mvp, upos, ucolor, usampler;
         sui_glyph *glyphs;
         unsigned glyphs_size, glyphs_capacity;
     } text;
@@ -76,6 +76,7 @@ void sui_font_free(sui_font *font);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
 void sui_renderer_free(sui_renderer *r);
-void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len);
+void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len,
+                       const float transform[16], bool transpose);
 
 #endif

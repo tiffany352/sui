@@ -189,7 +189,13 @@ int main(int argc, char *argv[])
             sui_text(white, sui_mkpoint(100,380), &hello_arabic)
         };
 
-        sui_renderer_draw(r, 800, 600, buf, sizeof(buf) / sizeof(sui_cmd));
+        float transform[16] = {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        sui_renderer_draw(r, 800, 600, buf, sizeof(buf) / sizeof(sui_cmd), transform, true);
 
         sui_layout_free(&curtime_layout);
 
