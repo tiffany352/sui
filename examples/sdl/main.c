@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
     SDL_Window* window = SDL_CreateWindow("SDL Example", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     SDL_Event ev;
+    sui_library l[1];
     sui_renderer r[1];
     char *error;
     sui_font sanspro[1], meirio[1], droidsans[1];
@@ -94,13 +95,19 @@ int main(int argc, char *argv[])
 
     glDebugMessageCallback((GLDEBUGPROC)&error_cb, NULL);
 
-    if (!sui_renderer_init(r, &error)) {
+    if (!sui_library_init(l, &error)) {
         printf("%s\n", error);
         free(error);
         return 1;
     }
 
-    if (!sui_font_fromfc(sanspro, r, &error, FcPatternBuild(
+    if (!sui_renderer_init(r, &error, l)) {
+        printf("%s\n", error);
+        free(error);
+        return 1;
+    }
+
+    if (!sui_font_fromfc(sanspro, l, &error, FcPatternBuild(
                              0,
                              FC_FAMILY, FcTypeString, "Source Sans Pro Light",
                              FC_FAMILY, FcTypeString, "Sans",
@@ -110,7 +117,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfc(meirio, r, &error, FcPatternBuild(
+    if (!sui_font_fromfc(meirio, l, &error, FcPatternBuild(
                              0,
                              FC_FAMILY, FcTypeString, "Meiryo",
                              FC_FAMILY, FcTypeString, "Droid Sans Japanese",
@@ -121,7 +128,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfc(droidsans, r, &error, FcPatternBuild(
+    if (!sui_font_fromfc(droidsans, l, &error, FcPatternBuild(
                              0,
                              FC_FAMILY, FcTypeString, "Droid Sans Arabic",
                              FC_LANG, FcTypeString, "ar",

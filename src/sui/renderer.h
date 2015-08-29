@@ -49,6 +49,10 @@ typedef struct sui_layout {
     sui_point origin, size;
 } sui_layout;
 
+typedef struct sui_library {
+    FT_Library library;
+} sui_library;
+
 typedef struct sui_renderer {
     tgl_vao vao;
     tgl_quad vbo;
@@ -57,7 +61,7 @@ typedef struct sui_renderer {
         GLint mvp, upos, ucolor;
     } rect;
     struct sui_renderer_text {
-        FT_Library library;
+        sui_library *library;
         tgl_shader shader;
         GLint mvp, upos, ucolor, usampler;
         sui_glyph *glyphs;
@@ -69,13 +73,16 @@ bool sui_layout_init(sui_layout *layout, sui_font *font, const sui_layout_format
                      const char *text, size_t length, char **error) WARN_UNUSED;
 void sui_layout_free(sui_layout *layout);
 
-bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
-bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;
-bool sui_font_fromfc(sui_font *font, sui_renderer *r, char **error, FcPattern *pattern) WARN_UNUSED;
-bool sui_font_fromfamily(sui_font *font, sui_renderer *r, char **error, const char *family) WARN_UNUSED;
+bool sui_font_fromfile(sui_font *font, sui_library *l, char **error, const char *path) WARN_UNUSED;
+bool sui_font_fromdata(sui_font *font, sui_library *l, char **error, const void *buf, size_t len) WARN_UNUSED;
+bool sui_font_fromfc(sui_font *font, sui_library *l, char **error, FcPattern *pattern) WARN_UNUSED;
+bool sui_font_fromfamily(sui_font *font, sui_library *l, char **error, const char *family) WARN_UNUSED;
 void sui_font_free(sui_font *font);
 
-bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;
+bool sui_library_init(sui_library *l, char **error) WARN_UNUSED;
+void sui_library_free(sui_library *l);
+
+bool sui_renderer_init(sui_renderer *r, char **error, sui_library *library) WARN_UNUSED;
 void sui_renderer_free(sui_renderer *r);
 void sui_renderer_draw(sui_renderer *r, unsigned w, unsigned h, struct sui_cmd *cmds, size_t len,
                        const float transform[16], bool transpose);

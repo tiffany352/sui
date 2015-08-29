@@ -88,32 +88,32 @@ void sui_layout_free(sui_layout *layout)
     hb_buffer_destroy(layout->buffer);
 }
 
-static bool font_fromfont(sui_font *font, sui_renderer *r, char **error, FT_Face face)
+static bool font_fromfont(sui_font *font, sui_library *l, char **error, FT_Face face)
 {
-    (void)r, (void)error;
+    (void)l, (void)error;
     font->hb_font = hb_ft_font_create(face, NULL);
     font->hb_face = hb_ft_face_create(face, NULL);
     return true;
 }
 
-bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path)
+bool sui_font_fromfile(sui_font *font, sui_library *l, char **error, const char *path)
 {
     FT_Error fterr;
-    if ((fterr = FT_New_Face(r->text.library, path, 0, &font->face))) {
+    if ((fterr = FT_New_Face(l->library, path, 0, &font->face))) {
         *error = sui_aprintf("FT_New_Face: Error code %i", fterr);
         return false;
     }
-    return font_fromfont(font, r, error, font->face);
+    return font_fromfont(font, l, error, font->face);
 }
 
-bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len)
+bool sui_font_fromdata(sui_font *font, sui_library *l, char **error, const void *buf, size_t len)
 {
     FT_Error fterr;
-    if ((fterr = FT_New_Memory_Face(r->text.library, buf, len, 0, &font->face))) {
+    if ((fterr = FT_New_Memory_Face(l->library, buf, len, 0, &font->face))) {
         *error = sui_aprintf("FT_New_Memory_Face: Error code %i", fterr);
         return false;
     }
-    return font_fromfont(font, r, error, font->face);
+    return font_fromfont(font, l, error, font->face);
 }
 
 const char *sui_result_name(FcResult res)
@@ -128,7 +128,7 @@ const char *sui_result_name(FcResult res)
     }
 }
 
-bool sui_font_fromfc(sui_font *font, sui_renderer *r, char **error, FcPattern *pattern)
+bool sui_font_fromfc(sui_font *font, sui_library *l, char **error, FcPattern *pattern)
 {
     FcResult res;
     FcConfig *config = FcConfigGetCurrent();
@@ -155,16 +155,16 @@ bool sui_font_fromfc(sui_font *font, sui_renderer *r, char **error, FcPattern *p
         return false;
     }
     FT_Error fterr;
-    if ((fterr = FT_New_Face(r->text.library, (const char*)file, index, &font->face))) {
+    if ((fterr = FT_New_Face(l->library, (const char*)file, index, &font->face))) {
         *error = sui_aprintf("FT_New_Face: Error code %i", fterr);
         return false;
     }
-    return font_fromfont(font, r, error, font->face);
+    return font_fromfont(font, l, error, font->face);
 }
 
-bool sui_font_fromfamily(sui_font *font, sui_renderer *r, char **error, const char *family)
+bool sui_font_fromfamily(sui_font *font, sui_library *l, char **error, const char *family)
 {
-    return sui_font_fromfc(font, r, error,
+    return sui_font_fromfc(font, l, error,
                            FcPatternBuild(0, FC_FAMILY, FcTypeString, family, (char*)0));
 }
 
@@ -179,9 +179,28 @@ extern const char sui_shader_quad_vert[];
 extern const char sui_shader_rect_frag[];
 extern const char sui_shader_text_frag[];
 
-bool sui_renderer_init(sui_renderer *r, char **error)
+bool sui_library_init(sui_library *l, char **error)
+{
+    FT_Error fterr;
+    if ((fterr = FT_Init_FreeType(&l->library))) {
+        char *buf = malloc(128);
+        int res = snprintf(buf, 128, "FT_Init_FreeType: Error code %i", fterr);
+        buf = realloc(buf, res);
+        *error = buf;
+        return false;
+    }
+    return true;
+}
+
+void sui_library_free(sui_library *l)
+{
+    FT_Done_FreeType(l->library);
+}
+
+bool sui_renderer_init(sui_renderer *r, char **error, sui_library *l)
 {
     memset(r, 0, sizeof(sui_renderer));
+    r->text.library = l;
     tgl_vao_init(&r->vao);
     tgl_vao_bind(&r->vao);
     tgl_quad_init(&r->vbo, SUI_RECT_POS);
@@ -227,14 +246,6 @@ bool sui_renderer_init(sui_renderer *r, char **error)
         text->upos = glGetUniformLocation(text->shader.program, "upos");
         text->ucolor = glGetUniformLocation(text->shader.program, "ucolor");
         text->usampler = glGetUniformLocation(text->shader.program, "usampler");
-        FT_Error fterr;
-        if ((fterr = FT_Init_FreeType(&text->library))) {
-            char *buf = malloc(128);
-            int res = snprintf(buf, 128, "FT_Init_FreeType: Error code %i", fterr);
-            buf = realloc(buf, res);
-            *error = buf;
-            return false;
-        }
     }
 
     return true;
@@ -246,7 +257,6 @@ void sui_renderer_free(sui_renderer *r)
     tgl_quad_free(&r->vbo);
     //tgl_shader_free(&r->rect.shader);
     //tgl_shader_free(&r->text.shader);
-    FT_Done_FreeType(r->text.library);
     for (unsigned i = 0; i < r->text.glyphs_size; i++) {
         glDeleteTextures(1, &r->text.glyphs[i].tex);
     }
