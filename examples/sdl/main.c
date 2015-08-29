@@ -100,19 +100,32 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!sui_font_fromfile(sanspro, r, &error, "/usr/share/fonts/adobe-source-sans-pro/SourceSansPro-Light.otf")) {
+    if (!sui_font_fromfc(sanspro, r, &error, FcPatternBuild(
+                             0,
+                             FC_FAMILY, FcTypeString, "Source Sans Pro Light",
+                             FC_FAMILY, FcTypeString, "Sans",
+                             NULL))) {
         printf("%s\n", error);
         free(error);
         return 1;
     }
 
-    if (!sui_font_fromfile(meirio, r, &error, "meirio.ttf")) {
+    if (!sui_font_fromfc(meirio, r, &error, FcPatternBuild(
+                             0,
+                             FC_FAMILY, FcTypeString, "Meiryo",
+                             FC_FAMILY, FcTypeString, "Droid Sans Japanese",
+                             FC_LANG, FcTypeString, "jp",
+                             NULL))) {
         printf("%s\n", error);
         free(error);
         return 1;
     }
 
-    if (!sui_font_fromfile(droidsans, r, &error, "/usr/share/fonts/TTF/DroidSansArabic.ttf")) {
+    if (!sui_font_fromfc(droidsans, r, &error, FcPatternBuild(
+                             0,
+                             FC_FAMILY, FcTypeString, "Droid Sans Arabic",
+                             FC_LANG, FcTypeString, "ar",
+                             NULL))) {
         printf("%s\n", error);
         free(error);
         return 1;

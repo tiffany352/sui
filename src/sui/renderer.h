@@ -6,6 +6,7 @@
 #include FT_FREETYPE_H
 #include <hb.h>
 #include <hb-ft.h>
+#include <fontconfig/fontconfig.h>
 
 #include "tgl/tgl.h"
 #include "util.h"
@@ -69,6 +70,8 @@ void sui_layout_free(sui_layout *layout);
 
 bool sui_font_fromfile(sui_font *font, sui_renderer *r, char **error, const char *path) WARN_UNUSED;
 bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void *buf, size_t len) WARN_UNUSED;
+bool sui_font_fromfc(sui_font *font, sui_renderer *r, char **error, FcPattern *pattern) WARN_UNUSED;
+bool sui_font_fromfamily(sui_font *font, sui_renderer *r, char **error, const char *family) WARN_UNUSED;
 void sui_font_free(sui_font *font);
 
 bool sui_renderer_init(sui_renderer *r, char **error) WARN_UNUSED;

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <hb-icu.h>
+#include <fontconfig/fcfreetype.h>
 
 #include "sui/widgets.h"
 
@@ -85,6 +86,58 @@ bool sui_font_fromdata(sui_font *font, sui_renderer *r, char **error, const void
         return false;
     }
     return font_fromfont(font, r, error, font->face);
+}
+
+const char *sui_result_name(FcResult res)
+{
+    switch (res) {
+    case FcResultMatch:        return "FcResultMatch";
+    case FcResultNoMatch:      return "FcResultNoMatch";
+    case FcResultTypeMismatch: return "FcResultTypeMismatch";
+    case FcResultNoId:         return "FcResultNoId";
+    case FcResultOutOfMemory:  return "FcResultOutOfMemory";
+    default:                   return "Unknown result";
+    }
+}
+
+bool sui_font_fromfc(sui_font *font, sui_renderer *r, char **error, FcPattern *pattern)
+{
+    FcResult res;
+    FcConfig *config = FcConfigGetCurrent();
+    if (!FcConfigSubstitute(config, pattern, FcMatchFont)) {
+        *error = sui_aprintf("FcConfigSubstitute: Allocation failure");
+        return false;
+    }
+    FcDefaultSubstitute(pattern);
+    FcPattern *match = FcFontMatch(config, pattern, &res);
+    if (res != FcResultMatch) {
+        *error = sui_aprintf("FcFontMatch: %s", sui_result_name(res));
+        return false;
+    }
+    FcChar8 *file;
+    int index;
+    res = FcPatternGetString(match, FC_FILE, 0, &file);
+    if (res != FcResultMatch) {
+        *error = sui_aprintf("FcPatternGetString FC_FILE: %s", sui_result_name(res));
+        return false;
+    }
+    res = FcPatternGetInteger(match, FC_INDEX, 0, &index);
+    if (res != FcResultMatch) {
+        *error = sui_aprintf("FcPatternGetInteger FC_INDEX: %s", sui_result_name(res));
+        return false;
+    }
+    FT_Error fterr;
+    if ((fterr = FT_New_Face(r->text.library, (const char*)file, index, &font->face))) {
+        *error = sui_aprintf("FT_New_Face: Error code %i", fterr);
+        return false;
+    }
+    return font_fromfont(font, r, error, font->face);
+}
+
+bool sui_font_fromfamily(sui_font *font, sui_renderer *r, char **error, const char *family)
+{
+    return sui_font_fromfc(font, r, error,
+                           FcPatternBuild(0, FC_FAMILY, FcTypeString, family, (char*)0));
 }
 
 void sui_font_free(sui_font *font)
