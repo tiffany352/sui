@@ -387,21 +387,22 @@ static void draw_text(sui_cmd cmd, unsigned w, unsigned h, sui_renderer *r,
     for (unsigned i = 0; i < layout->count; i++) {
         // not a unicode codepoint.
         unsigned codepoint = layout->infos[i].codepoint;
-        unsigned top = layout->fmt.size;
+        int top = layout->fmt.size;
         sui_glyph *glyph = sui_renderer_get_glyph(r, codepoint, layout->fmt.size, layout->font);
         // prevents wrapping to the left side
         if (i == 0) {
             pen_x = glyph->left * 64;
         }
         float ux = (cmd.position.x +
-                    pen_x / 64 -
-                    layout->positions[i].x_offset +
-                    glyph->left) / (float)w;
+                    (int)pen_x / 64 -
+                    (int)layout->positions[i].x_offset +
+                    (int)glyph->left) / (float)w;
         float uy = 1.0 - (cmd.position.y +
-                          pen_y / 64 -
-                          layout->positions[i].y_offset -
-                          glyph->top +
-                          top) / (float)h;
+                          (int)pen_y / 64 -
+                          (int)layout->positions[i].y_offset -
+                          (int)glyph->top + // size of this particular glyph
+                          (int)top // size of the whole font
+            ) / (float)h;
         float uw = glyph->width / (float)w;
         float uh = glyph->rows / -(float)h;
         glUniform4f(text->upos, ux, uy, uw, uh);

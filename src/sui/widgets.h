@@ -27,7 +27,7 @@ enum sui_cmd_type {
 };
 
 typedef struct sui_point {
-    unsigned x, y;
+    int x, y;
 } sui_point;
 
 #define sui_mkpoint(x,y) ((sui_point) { x, y })
