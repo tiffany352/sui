@@ -353,7 +353,7 @@ void sui_debug_print_image(const unsigned char *src, unsigned w, unsigned h, uns
 {
     static const char chars[] = " .-=+*@#";
 
-    printf("%p %ux%u\n", src, w, h);
+    printf("%p %ux%u\n", (void*)src, w, h);
     for (unsigned y = 0; y < h; y++) {
         for (unsigned x = 0; x < w; x++) {
             unsigned char val = src[y*pitch + x];
